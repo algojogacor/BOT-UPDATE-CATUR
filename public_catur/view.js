@@ -1,44 +1,65 @@
-import { PIECES } from './constants.js';
-
 export class ChessView {
-    constructor(elementId, onClickHandler) {
-        this.element = document.getElementById(elementId);
-        this.onClickHandler = onClickHandler; // Fungsi yang dipanggil saat diklik
+    constructor(elementId, onClickSquare) {
+        this.boardElement = document.getElementById(elementId);
+        this.onClickSquare = onClickSquare;
+        
+        // Simbol Unicode
+        this.pieces = {
+            'r': '♜', 'n': '♞', 'b': '♝', 'q': '♛', 'k': '♚', 'p': '♟', 
+            'R': '♖', 'N': '♘', 'B': '♗', 'Q': '♕', 'K': '♔', 'P': '♙'
+        };
     }
 
-    render(boardGrid) {
-        this.element.innerHTML = ''; // Bersihkan papan
-        
+    render(grid) {
+        this.boardElement.innerHTML = ''; 
+
         for (let r = 0; r < 8; r++) {
             for (let c = 0; c < 8; c++) {
                 const square = document.createElement('div');
                 square.classList.add('square');
-                square.classList.add((r + c) % 2 === 0 ? 'light' : 'dark');
                 
-                // Set koordinat data
+                // Tentukan Warna Kotak Belang-Belang
+                const isWhiteSquare = (r + c) % 2 === 0;
+                square.classList.add(isWhiteSquare ? 'white' : 'black');
+                
                 square.dataset.row = r;
                 square.dataset.col = c;
-
-                // Render Bidak
-                const pieceChar = boardGrid[r][c];
-                if (pieceChar) {
-                    square.textContent = PIECES[pieceChar];
-                }
-
-                // Event Klik
-                square.addEventListener('click', (e) => {
-                    // Panggil fungsi di Main.js
-                    this.onClickHandler(r, c);
+                
+                square.addEventListener('click', () => {
+                    this.onClickSquare(parseInt(square.dataset.row), parseInt(square.dataset.col));
                 });
 
-                this.element.appendChild(square);
+                // Tampilkan Bidak
+                const pieceChar = grid[r][c];
+                if (pieceChar) {
+                    const pieceSpan = document.createElement('span');
+                    pieceSpan.innerText = this.pieces[pieceChar] || pieceChar;
+                    
+                    // Style Bidak Agar Kontras
+                    const isWhitePiece = pieceChar === pieceChar.toUpperCase();
+                    
+                    // Bidak Putih = Warna Putih + Outline Hitam Tipis
+                    // Bidak Hitam = Warna Hitam Total
+                    pieceSpan.style.color = isWhitePiece ? '#ffffff' : '#000000';
+                    
+                    if (isWhitePiece) {
+                        // Bayangan hitam biar kelihatan di kotak terang
+                        pieceSpan.style.textShadow = '0px 0px 2px #000'; 
+                    }
+                    
+                    square.appendChild(pieceSpan);
+                }
+
+                this.boardElement.appendChild(square);
             }
         }
     }
 
     highlightSquare(row, col, className) {
-        // Cari elemen div yang sesuai koordinat
-        const square = this.element.querySelector(`[data-row="${row}"][data-col="${col}"]`);
-        if (square) square.classList.add(className);
+        const index = row * 8 + col;
+        const squares = this.boardElement.children;
+        if (squares[index]) {
+            squares[index].classList.add(className);
+        }
     }
 }
