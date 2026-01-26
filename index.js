@@ -57,37 +57,62 @@ app.use('/game', express.static(path.join(__dirname, 'public_catur')));
 
 // API: Web lapor hasil game ke sini
 app.post('/api/catur-finish', (req, res) => {
-    const { user, result, bet } = req.body; // Data dari Web
+    // 1. Ambil data 'level' juga dari body
+    const { user, result, bet, level } = req.body; 
     
-    // Validasi sederhana (Cek apakah user ada di database bot)
+    // 2. Validasi Database
     const db = global.db;
+    if (!db || !db.users) {
+        return res.status(503).json({ status: 'error', message: 'Database bot belum siap. Coba lagi.' });
+    }
+
+    // 3. Validasi User
     if (!db.users[user]) {
         return res.status(404).json({ status: 'error', message: 'User tidak ditemukan' });
     }
 
     const userData = db.users[user];
     const taruhan = parseInt(bet) || 0;
+    const difficulty = parseInt(level) || 2; 
+
     let prize = 0;
     let text = "";
 
+    // 4. LOGIKA HADIAH BARU (Medium vs Hard)
     if (result === 'win') {
-        prize = taruhan * 2;
-        text = `🎉 SELAMAT! Kamu menang catur lawan AI.\n💰 Koin +${prize}`;
+        let multiplier = 1.2; // Default Medium: Untung 20%
+        let modeName = "Medium";
+
+        if (difficulty === 3) {
+            multiplier = 1.3; // Hard: Untung 30%
+            modeName = "Hard";
+        }
+
+        // Rumus: Taruhan x Multiplier (Pakai Math.floor biar angkanya bulat)
+        prize = Math.floor(taruhan * multiplier);
+        const profit = prize - taruhan;
+
+        text = `🎉 MENANG (${modeName})!\n💰 Total Dapat: ${prize}\n📈 Profit Bersih: ${profit}`;
+        
     } else if (result === 'draw') {
-        prize = taruhan;
+        prize = taruhan; // Balik modal
         text = `🤝 Seri! Koin ${prize} dikembalikan.`;
     } else {
         text = `💀 Kamu kalah catur. Koin ${taruhan} hangus.`;
     }
 
-    // Update Database Bot
+    // 5. Update Database & Save
     userData.balance += prize; 
-    saveDB(db); // Simpan database otomatis
+    
+    // Pastikan fungsi saveDB ada (jika pakai helper)
+    if (typeof saveDB === 'function') {
+        saveDB(db); 
+    }
 
-    // Kirim respon balik ke Web
+    // 6. Kirim respon balik ke Web
     res.json({ status: 'ok', message: text, newBalance: userData.balance });
     
-    console.log(`[CATUR] ${user} -> ${result} (Bet: ${taruhan}, Prize: ${prize})`);
+    console.log(`[CATUR] ${user} -> ${result} (Level: ${difficulty}, Bet: ${taruhan}, Prize: ${prize})`);
 });
 
 app.get('/', (req, res) => res.send('<h1>Bot Arya is Running! 🚀</h1>'));
@@ -640,6 +665,7 @@ async function startBot() {
 }
 
 startBot();
+
 
 
 
