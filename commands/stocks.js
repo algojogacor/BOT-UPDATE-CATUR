@@ -3,31 +3,30 @@ const { saveDB } = require('../helpers/database');
 // FEE BROKER (3%)
 const FEE_BUY = 0.03; 
 
-// INTERVAL UPDATE (5 MENIT - BIAR STABIL)
+// INTERVAL UPDATE (5 MENIT)
 const MARKET_INTERVAL = 5 * 60 * 1000; 
 
 // HELPER FORMAT ANGKA
 const fmt = (num) => Math.floor(Number(num)).toLocaleString('id-ID');
 
 // KONFIGURASI SAHAM (REAL WORLD PARAMETERS)
-// beta: Sensitivitas terhadap IHSG (1.0 = Ikut arus, >1.5 = Liar/Gorengan)
 const STOCKS = {
     // TIER 1: GORENGAN (High Risk, High Beta)
-    GOTO: { name: "GoTo", base: 10_000_000, beta: 2.5 }, 
-    FREN: { name: "Smartfren", base: 5_000_000, beta: 3.0 },
+    GOTO: { name: "GOTO", base: 10_000_000, beta: 2.5 }, 
+    FREN: { name: "FREN", base: 5_000_000, beta: 3.0 },
 
     // TIER 2: BLUE CHIP (Penggerak IHSG)
-    TLKM: { name: "Telkom", base: 400_000_000, beta: 1.1 },
-    BBCA: { name: "BCA", base: 950_000_000, beta: 1.0 }, 
-    BMRI: { name: "Mandiri", base: 600_000_000, beta: 1.2 },
+    TLKM: { name: "TLKM", base: 400_000_000, beta: 1.1 },
+    BBCA: { name: "BBCA", base: 950_000_000, beta: 1.0 }, 
+    BMRI: { name: "BMRI", base: 600_000_000, beta: 1.2 },
 
     // TIER 3: CYCLICAL (Tergantung Komoditas)
-    GGRM: { name: "G.Garam", base: 2_500_000_000, beta: 0.8 },
-    UNTR: { name: "U.Tractors", base: 2_800_000_000, beta: 1.5 },
+    GGRM: { name: "GGRM", base: 2_500_000_000, beta: 0.8 },
+    UNTR: { name: "UNTR", base: 2_800_000_000, beta: 1.5 },
     
     // INDUKS (Market Maker)
     IHSG: { name: "IHSG", base: 75_000_000_000, beta: 1.0 }, 
-    BTC:  { name: "BTC ETF", base: 500_000_000_000, beta: 0.2 } // Tidak peduli IHSG (Uncorrelated)
+    BTC:  { name: "BTC", base: 500_000_000_000, beta: 0.2 }
 };
 
 // BERITA PASAR INDONESIA
@@ -48,7 +47,7 @@ const getStockData = (ticker) => {
     const now = Date.now();
     
     // Seed Waktu (Berubah tiap 5 menit)
-    // Harga KUNCI selama 5 menit agar tidak ada slippage
+    // Harga KUNCI selama 5 menit 
     const timeSeed = Math.floor(now / MARKET_INTERVAL); 
 
     // 1. Tentukan Sentimen IHSG (Pasar Global)
@@ -67,7 +66,7 @@ const getStockData = (ticker) => {
         // BTC jalan sendiri (Crypto correlation)
         stockMove = Math.sin(timeSeed * 123) * 0.05; 
     } else {
-        // Saham mengikuti IHSG dikali Beta + Faktor Unik Gorengan
+        // Saham mengikuti IHSG dikali Beta
         const uniqueNoise = Math.cos(timeSeed * config.name.length) * 0.01;
         stockMove = (ihsgMove * config.beta) + uniqueNoise;
     }
@@ -75,12 +74,12 @@ const getStockData = (ticker) => {
     // 3. Hitung Harga Final
     let currentPrice = Math.floor(config.base * (1 + stockMove));
 
-    // KRISIS MONETER (Jarang terjadi: Tiap 100 blok / ~8 jam)
+    // KRISIS MONETER DISKON 50%
     const isCrisis = (timeSeed % 100 === 0);
-    if (isCrisis) currentPrice = Math.floor(currentPrice * 0.8); // Diskon 20%
+    if (isCrisis) currentPrice = Math.floor(currentPrice * 0.5); 
 
     // Tentukan Warna
-    let icon = '➡️'; // Sideways
+    let icon = '➡️'; 
     if (stockMove > 0.01) icon = '🚀';
     else if (stockMove > 0) icon = '🟢';
     else if (stockMove < -0.01) icon = '🩸';
@@ -101,7 +100,7 @@ module.exports = async (command, args, msg, user, db) => {
 
     if (!user.portfolio) user.portfolio = {};
 
-    // 1. MARKET (TAMPILAN REALISTIS)
+    // 1. MARKET 
     if (command === 'saham' || command === 'stock' || command === 'market') {
         const now = Date.now();
         const nextTime = Math.ceil(now / MARKET_INTERVAL) * MARKET_INTERVAL;
@@ -167,7 +166,7 @@ module.exports = async (command, args, msg, user, db) => {
         return msg.reply(`✅ *BUY ORDER MATCHED*\nEmiten: ${ticker}\nVol: ${fmt(qty)} Lot\nPrice: Rp ${fmt(price)}\nFee (3%): Rp ${fmt(fee)}\n📉 Total: Rp ${fmt(total)}`);
     }
 
-    // 3. SELL (PAJAK PROGRESIF SULTAN)
+    // 3. SELL (PAJAK PROGRESIF)
     if (command === 'jualsaham' || command === 'sellstock') {
         const ticker = args[0]?.toUpperCase();
         let qty = args[1];
@@ -185,7 +184,7 @@ module.exports = async (command, args, msg, user, db) => {
 
         // --- PAJAK PROGRESIF ---
         let rate = 0.05; // 5% Standard
-        if (user.balance > 100_000_000_000_000) rate = 0.50; // >100T Pajak 50%
+        if (user.balance > 100_000_000_000_000) rate = 0.30; // >100T Pajak 30%
         else if (user.balance > 10_000_000_000_000) rate = 0.20; // >10T Pajak 20%
 
         const tax = Math.floor(gross * rate);
