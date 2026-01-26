@@ -22,8 +22,7 @@ module.exports = async (command, args, msg, user, db) => {
             return msg.reply(`🔋 *STAMINA LOW!* Isi tenaga dulu ${sisa} menit.`);
         }
 
-        // GANTI LINK INI DENGAN LINK VERCEL/NETLIFY KAMU NANTI
-        const GAME_LINK = "https://your-game-url.vercel.app"; 
+        const GAME_LINK = "https://rpgkeren.netlify.app/"; 
 
         let txt = `⚔️ *NEON WARS: CYBER RPG* ⚔️\n\n`;
         txt += `Hadapi Boss & Dapatkan Reward Ratusan Triliun!\n`;
