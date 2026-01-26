@@ -424,7 +424,7 @@ async function startBot() {
             await wikiKnowCmd(command, args, msg).catch(e => console.error("Error WikiKnow:", e.message));
             await adminCmd(command, args, msg, user, db).catch(e => console.error("Error Admin:", e.message));
             await aiCmd(command, args, msg, user, db).catch(e => console.error("Error AI:", e.message));
-            await caturCmd(command, args, msg, sock).catch(e => console.error("Error Catur:", e.message));
+            await caturCmd(command, args, msg, user, db, sock).catch(e => console.error("Error Catur:", e.message));
             await imageCmd(command, args, msg, user, db, sock).catch(e => console.error("Error Image:", e.message));
             
             if (typeof profileCmd !== 'undefined') {
@@ -633,6 +633,7 @@ async function startBot() {
 }
 
 startBot();
+
 
 
 
