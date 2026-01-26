@@ -22,11 +22,11 @@ module.exports = async function(command, args, msg, user, db, sock) {
     if (baseUrl.endsWith('/')) {
         baseUrl = baseUrl.slice(0, -1);
     }
-    
+
     const link = `${baseUrl}/game/index.html?user=${sender}&bet=${bet}`;
 
-    // 5. Kirim Pesan
+    // 5. Kirim Pesan (Update Info Hadiah)
     await sock.sendMessage(msg.from, { 
-        text: `🎮 *CATUR VS AI*\n\n💰 Taruhan: ${bet}\n🏆 Hadiah: ${bet * 2}\n\n👇 *KLIK LINK BUAT MAIN:* 👇\n${link}\n\n_(Jangan refresh browser atau uang hangus!)_`
+        text: `🎮 *CATUR VS AI*\n\n💰 Taruhan: ${bet}\n📊 *Pilihan Mode di Web:*\n- Medium: Profit 20%\n- Hard: Profit 30%\n\n👇 *KLIK LINK BUAT MAIN:* 👇\n${link}\n\n_(Jangan refresh browser!)_`
     }, { quoted: msg });
 };
