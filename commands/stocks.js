@@ -3,53 +3,59 @@ const { saveDB } = require('../helpers/database');
 // FEE BROKER (3%)
 const FEE_BUY = 0.03; 
 
-// KONFIGURASI SAHAM (EDISI SULTAN - NAMING SINGKAT)
+// INTERVAL UPDATE HARGA (5 MENIT)
+const MARKET_INTERVAL = 5 * 60 * 1000; 
+
+// HELPER FORMAT ANGKA
+const fmt = (num) => Math.floor(Number(num)).toLocaleString('id-ID');
+
+// KONFIGURASI SAHAM
 const STOCKS = {
     // TIER 1: RECEH
-    GOTO: { name: "GoTo", base: 10_000_000, volatility: 0.15 }, 
-    FREN: { name: "Smartfren", base: 5_000_000, volatility: 0.15 },
+    GOTO: { name: "GOTO", base: 10_000_000, volatility: 0.15 }, 
+    FREN: { name: "FREN", base: 5_000_000, volatility: 0.15 },
 
     // TIER 2: BLUE CHIP
-    TLKM: { name: "Telkom", base: 400_000_000, volatility: 0.05 },
+    TLKM: { name: "TLKM", base: 400_000_000, volatility: 0.05 },
     BBCA: { name: "BCA", base: 950_000_000, volatility: 0.03 }, 
-    BMRI: { name: "Mandiri", base: 600_000_000, volatility: 0.04 },
+    BMRI: { name: "BMRI", base: 600_000_000, volatility: 0.04 },
 
     // TIER 3: HIGH CLASS
-    GGRM: { name: "G.Garam", base: 2_500_000_000, volatility: 0.08 },
-    UNTR: { name: "U.Tractors", base: 2_800_000_000, volatility: 0.07 },
+    GGRM: { name: "GGRM", base: 2_500_000_000, volatility: 0.08 },
+    UNTR: { name: "UNTR", base: 2_800_000_000, volatility: 0.07 },
     
     // TIER 4: SULTAN ONLY
     IHSG: { name: "IHSG", base: 75_000_000_000, volatility: 0.02 }, 
     BTC: { name: "BTC", base: 500_000_000_000, volatility: 0.20 } 
 };
 
-// --- LOGIKA PASAR (REALISTIS) ---
+// --- LOGIKA PASAR (DETERMINISTIC / STABIL) ---
 const getStockData = (ticker) => {
     const stock = STOCKS[ticker];
     const now = Date.now();
     
-    // Periode Tren (15 Menit) & Fluktuasi (1 Menit)
-    const trendPeriod = Math.floor(now / (15 * 60 * 1000)); 
-    const tickPeriod = Math.floor(now / 60000);
+    // Gunakan waktu per blok 5 menit
+    const timeSeed = Math.floor(now / MARKET_INTERVAL); 
 
-    // 1. Tren Pasar
-    const marketCycle = Math.sin(trendPeriod / 4); 
-    const trendBias = marketCycle * 0.3; 
+    // Generate angka acak namun konsisten berdasarkan timeSeed
+    // Fungsi sin(seed) akan selalu menghasilkan angka yang sama untuk seed yang sama
+    const uniqueVal = Math.sin(timeSeed + stock.name.length * 11); 
+    const trendVal = Math.sin(timeSeed / 5); // Tren jangka panjang (naik turun pelan)
 
-    // 2. Noise
-    const uniqueSeed = tickPeriod + stock.name.length;
-    const noise = Math.sin(uniqueSeed * 1337) * 0.5; 
+    // Gabungkan Tren + Noise Unik
+    const movement = (trendVal * 0.2) + (uniqueVal * stock.volatility);
 
-    // 3. Movement
-    const movement = trendBias + (stock.volatility * noise);
-
-    // 4. Harga Final
+    // Hitung Harga
     let changeAmount = stock.base * movement;
     let currentPrice = Math.floor(stock.base + changeAmount);
 
-    // KRISIS (Setiap 2 Jam chance 50%)
-    const isCrash = (trendPeriod % 8 === 0) && (Math.random() > 0.5); 
-    if (isCrash) currentPrice = Math.floor(currentPrice * 0.7); 
+    // KRISIS: Cek setiap 4 jam 
+    // Menggunakan Math.abs
+    const isCrash = (timeSeed % 48 === 0) && (Math.abs(uniqueVal) > 0.5); 
+    
+    if (isCrash) {
+        currentPrice = Math.floor(currentPrice * 0.7); // Diskon 30%
+    }
 
     return {
         price: Math.max(1000, currentPrice),
@@ -66,23 +72,25 @@ module.exports = async (command, args, msg, user, db) => {
     // 1. MARKET
     if (command === 'saham' || command === 'stock' || command === 'market') {
         const now = Date.now();
-        const nextUpdate = Math.ceil((60000 - (now % 60000)) / 1000); 
+        // Hitung sisa waktu ke update berikutnya
+        const nextTime = Math.ceil(now / MARKET_INTERVAL) * MARKET_INTERVAL;
+        const diff = nextTime - now;
+        const m = Math.floor(diff / 60000);
+        const s = Math.floor((diff % 60000) / 1000);
+
         const { isCrash } = getStockData('IHSG');
 
-        // Header tetap memberi hint jika Crash parah, tapi list harga polos
         let txt = isCrash 
-            ? `🚨 *MARKET CRASH* 🚨\n`
+            ? `🚨 *MARKET CRASH* (Semua Anjlok) 🚨\n`
             : `📈 *BURSA EFEK (BEI)* 📉\n`;
         
-        txt += `⏱️ Refresh: ${nextUpdate}s\n`;
+        txt += `⏳ Next Update: ${m}m ${s}s\n`; // Countdown
         txt += `------------------\n`;
 
         for (let [ticker, data] of Object.entries(STOCKS)) {
             const { price } = getStockData(ticker);
-            
-            // TAMPILAN POLOS (Hard Mode)
-            // Hanya Nama dan Harga.
-            txt += `🔹 *${ticker}*: Rp ${price.toLocaleString('id-ID')}\n`;
+            // Tampilan Polos
+            txt += `🔹 *${ticker}*: Rp ${fmt(price)}\n`;
         }
         
         txt += `\n💡 \`!belisaham <code> <qty>\``;
@@ -94,14 +102,14 @@ module.exports = async (command, args, msg, user, db) => {
         const ticker = args[0]?.toUpperCase();
         let qtyRaw = args[1];
 
-        if (!STOCKS[ticker]) return msg.reply("❌ Kode salah.");
+        if (!STOCKS[ticker]) return msg.reply("❌ Kode saham salah.");
         
         let qty = parseInt(qtyRaw);
         const { price } = getStockData(ticker);
 
         if (qtyRaw === 'max' || qtyRaw === 'all') {
             qty = Math.floor(user.balance / (price * (1 + FEE_BUY)));
-            if (qty < 1) return msg.reply(`❌ Uang kurang.`);
+            if (qty < 1) return msg.reply(`❌ Uang tidak cukup.`);
         }
 
         if (isNaN(qty) || qty < 1) return msg.reply("❌ Jumlah salah.");
@@ -110,22 +118,22 @@ module.exports = async (command, args, msg, user, db) => {
         const fee = Math.floor(rawCost * FEE_BUY);
         const total = rawCost + fee;
 
-        if (user.balance < total) return msg.reply(`❌ Kurang: Rp ${total.toLocaleString('id-ID')}`);
+        if (user.balance < total) return msg.reply(`❌ Uang kurang Rp ${fmt(total - user.balance)}`);
 
         user.balance -= total;
 
         if (!user.portfolio[ticker]) user.portfolio[ticker] = { qty: 0, avg: 0 };
         const p = user.portfolio[ticker];
         
-        // Avg Down Logic
+        // Average Down Logic
         p.avg = Math.floor(((p.qty * p.avg) + rawCost) / (p.qty + qty));
         p.qty += qty;
 
         saveDB(db);
-        return msg.reply(`✅ *BUY SUKSES*\nCode: ${ticker}\nVol: ${qty}\nPrice: ${price.toLocaleString()}\nFee (3%): ${fee.toLocaleString()}\n📉 Total: ${total.toLocaleString()}`);
+        return msg.reply(`✅ *BUY SUKSES*\nCode: ${ticker}\nVol: ${fmt(qty)}\nPrice: ${fmt(price)}\nFee (3%): ${fmt(fee)}\n📉 Total: ${fmt(total)}`);
     }
 
-    // 3. SELL (PAJAK SULTAN PROGRESIF)
+    // 3. SELL
     if (command === 'jualsaham' || command === 'sellstock') {
         const ticker = args[0]?.toUpperCase();
         let qty = args[1];
@@ -136,7 +144,7 @@ module.exports = async (command, args, msg, user, db) => {
         if (qty === 'all') qty = p.qty;
         qty = parseInt(qty);
 
-        if (isNaN(qty) || qty < 1 || qty > p.qty) return msg.reply("❌ Jumlah salah.");
+        if (isNaN(qty) || qty < 1 || qty > p.qty) return msg.reply("❌ Jumlah salah/kurang.");
 
         const { price } = getStockData(ticker);
         const gross = price * qty;
@@ -158,10 +166,10 @@ module.exports = async (command, args, msg, user, db) => {
         if (p.qty === 0) delete user.portfolio[ticker];
 
         saveDB(db);
-        return msg.reply(`✅ *SELL SUKSES*\nCode: ${ticker}\nVol: ${qty}\nPrice: ${price.toLocaleString()}\n\n💰 Gross: ${gross.toLocaleString()}\n💸 Tax (${rate*100}%): ${tax.toLocaleString()}\n💵 *Net: ${net.toLocaleString()}*\n\n📊 P/L: ${status} ${profit.toLocaleString()} (${pct}%)`);
+        return msg.reply(`✅ *SELL SUKSES*\nCode: ${ticker}\nVol: ${fmt(qty)}\nPrice: ${fmt(price)}\n\n💰 Gross: ${fmt(gross)}\n💸 Tax (${rate*100}%): ${fmt(tax)}\n💵 *Net: ${fmt(net)}*\n\n📊 P/L: ${status} ${fmt(profit)} (${pct}%)`);
     }
 
-    // 4. PORTO (Di sini P/L tetap ditampilkan agar user tau performa mereka sendiri)
+    // 4. PORTO
     if (command === 'porto' || command === 'pf') {
         let txt = `💼 *PORTOFOLIO*\n`;
         let totalVal = 0;
@@ -182,9 +190,9 @@ module.exports = async (command, args, msg, user, db) => {
                 const gain = net - (data.avg * data.qty);
                 const pct = ((gain / (data.avg * data.qty)) * 100).toFixed(1);
                 
-                txt += `📜 *${ticker}* (${data.qty})\n`;
-                txt += `   Avg: ${data.avg.toLocaleString()} | Now: ${price.toLocaleString()}\n`;
-                txt += `   ${gain >= 0 ? '🟢' : '🔴'} P/L: ${gain.toLocaleString()} (${pct}%)\n\n`;
+                txt += `📜 *${ticker}* (${fmt(data.qty)})\n`;
+                txt += `   Avg: ${fmt(data.avg)} | Now: ${fmt(price)}\n`;
+                txt += `   ${gain >= 0 ? '🟢' : '🔴'} P/L: ${fmt(gain)} (${pct}%)\n\n`;
 
                 totalVal += net;
                 totalGain += gain;
@@ -195,8 +203,8 @@ module.exports = async (command, args, msg, user, db) => {
         if (!hasStock) return msg.reply("💼 Kosong.");
 
         txt += `━━━━━━━━━━\n`;
-        txt += `💰 Net Asset: ${Math.floor(totalVal).toLocaleString()}\n`;
-        txt += `${totalGain >= 0 ? '📈' : '📉'} Floating P/L: ${Math.floor(totalGain).toLocaleString()}`;
+        txt += `💰 Net Asset: ${fmt(totalVal)}\n`;
+        txt += `${totalGain >= 0 ? '📈' : '📉'} Floating P/L: ${fmt(totalGain)}`;
         txt += `\n_(After Tax ${rate*100}%)_`;
 
         return msg.reply(txt);
@@ -222,6 +230,6 @@ module.exports = async (command, args, msg, user, db) => {
         user.lastDividend = now;
         saveDB(db);
 
-        return msg.reply(`💸 *DIVIDEN CAIR*\nAsset: ${totalAsset.toLocaleString()}\nYield: 3%\n💵 *Diterima: ${amount.toLocaleString()}*`);
+        return msg.reply(`💸 *DIVIDEN CAIR*\nAsset: ${fmt(totalAsset)}\nYield: 3%\n💵 *Diterima: ${fmt(amount)}*`);
     }
 };
