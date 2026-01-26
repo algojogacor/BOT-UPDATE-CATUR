@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>NEON WARS RPG</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+    <style>
+        :root { --main: #00ffcc; --bg: #050510; --enemy: #ff0055; --ui: #1a1a2e; }
+        body { background: var(--bg); color: #fff; font-family: 'Courier New', monospace; margin: 0; padding: 10px; overflow: hidden; user-select: none; }
+        
+        /* LAYOUT UTAMA */
+        #app { max-width: 500px; margin: 0 auto; display: flex; flex-direction: column; height: 95vh; }
+        
+        /* HEADER BATTLE */
+        .battle-scene { flex: 1; position: relative; border: 2px solid var(--enemy); border-radius: 10px; background: radial-gradient(circle, #222, #000); margin-bottom: 10px; display: flex; justify-content: center; align-items: center; overflow: hidden; }
+        .sprite { font-size: 80px; transition: transform 0.2s; filter: drop-shadow(0 0 10px rgba(255,255,255,0.5)); }
+        .shake { animation: shake 0.5s; }
+        .attack-anim { animation: lunge 0.3s; }
+
+        /* HUD (BAR DARAH) */
+        .hud { display: flex; justify-content: space-between; padding: 5px; font-weight: bold; font-size: 14px; }
+        .bar-wrap { width: 100px; height: 12px; background: #333; border: 1px solid #fff; margin-top: 5px; }
+        .hp-fill { height: 100%; width: 100%; transition: width 0.3s; }
+        .mp-fill { height: 4px; width: 100%; background: #00aaff; margin-top: 2px; }
+
+        /* LOG BOX */
+        #log-box { height: 100px; background: #000; border: 1px solid var(--main); padding: 5px; overflow-y: scroll; font-size: 11px; margin-bottom: 10px; opacity: 0.9; color: var(--main); }
+        
+        /* TOMBOL SKILL */
+        .controls { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+        button { background: var(--ui); color: var(--main); border: 1px solid var(--main); padding: 15px; border-radius: 5px; font-weight: bold; cursor: pointer; position: relative; }
+        button:active { background: var(--main); color: #000; }
+        button:disabled { filter: grayscale(1); opacity: 0.5; cursor: not-allowed; }
+        .cd-overlay { position: absolute; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); color:#fff; display:flex; align-items:center; justify-content:center; font-size:20px; display:none; }
+        
+        /* CLASS SELECTION */
+        #class-select, #win-screen { position: absolute; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.9); z-index: 10; display: flex; flex-direction: column; justify-content: center; align-items: center; }
+        .class-card { border: 1px solid #fff; padding: 15px; margin: 5px; width: 80%; cursor: pointer; text-align: left; }
+        .class-card:hover { background: #222; border-color: var(--main); }
+        .hidden { display: none !important; }
+
+        /* ANIMATIONS */
+        @keyframes shake { 0% { transform: translate(1px, 1px) rotate(0deg); } 10% { transform: translate(-1px, -2px) rotate(-1deg); } 20% { transform: translate(-3px, 0px) rotate(1deg); } 30% { transform: translate(3px, 2px) rotate(0deg); } 40% { transform: translate(1px, -1px) rotate(1deg); } 50% { transform: translate(-1px, 2px) rotate(-1deg); } 60% { transform: translate(-3px, 1px) rotate(0deg); } 70% { transform: translate(3px, 1px) rotate(-1deg); } 80% { transform: translate(-1px, -1px) rotate(1deg); } 90% { transform: translate(1px, 2px) rotate(0deg); } 100% { transform: translate(1px, -2px) rotate(-1deg); } }
+        @keyframes lunge { 0% { transform: scale(1); } 50% { transform: scale(1.5); } 100% { transform: scale(1); } }
+        
+        .code-box { background: #222; padding: 15px; border: 2px dashed #ff0055; color: #fff; font-size: 14px; word-break: break-all; margin-top:10px; cursor: pointer; }
+    </style>
+</head>
+<body>
+
+<div id="class-select">
+    <h2 style="color:var(--main)">CHOOSE YOUR CLASS</h2>
+    <div class="class-card" onclick="startGame('samurai')">
+        <strong style="color:#ff5555">⚔️ CYBER SAMURAI</strong><br>
+        <small>High DMG, Low HP. Skill: Slash, Focus, Execute</small>
+    </div>
+    <div class="class-card" onclick="startGame('titan')">
+        <strong style="color:#55ff55">🛡️ HEAVY TITAN</strong><br>
+        <small>High HP, Defense. Skill: Smash, Shield, Heal</small>
+    </div>
+    <div class="class-card" onclick="startGame('hacker')">
+        <strong style="color:#55ffff">💻 NETRUNNER</strong><br>
+        <small>Magic, Debuff. Skill: Zap, Virus, Overload</small>
+    </div>
+</div>
+
+<div id="win-screen" class="hidden">
+    <h1 style="color:#00ff00">MISSION COMPLETE</h1>
+    <p>Boss Defeated! Reward Generated.</p>
+    <p>Tap kotak di bawah untuk copy:</p>
+    <div class="code-box" id="final-code" onclick="copyCode()">GENERATING...</div>
+</div>
+
+<div id="app">
+    <div class="hud">
+        <div style="text-align:left">
+            PLAYER
+            <div class="bar-wrap"><div id="p-hp" class="hp-fill" style="background:#00ffcc"></div></div>
+            <div id="p-hp-txt">100/100</div>
+            <div class="mp-fill" id="p-mp"></div>
+        </div>
+        <div style="text-align:right">
+            <span id="e-name">ENEMY</span>
+            <div class="bar-wrap"><div id="e-hp" class="hp-fill" style="background:#ff0055"></div></div>
+            <div id="e-hp-txt">100/100</div>
+        </div>
+    </div>
+
+    <div class="battle-scene">
+        <div id="enemy-sprite" class="sprite">🤖</div>
+        <div style="position:absolute; bottom:10px; left:10px; font-size:40px;">👤</div>
+    </div>
+
+    <div id="log-box">
+        > SYSTEM INITIALIZED...<br>
+        > WAITING FOR USER INPUT...
+    </div>
+
+    <div class="controls">
+        <button onclick="useSkill(0)">
+            <span id="s0-name">ATTACK</span>
+        </button>
+        <button onclick="useSkill(1)">
+            <span id="s1-name">SKILL 1</span>
+            <div id="cd-1" class="cd-overlay"></div>
+        </button>
+        <button onclick="useSkill(2)">
+            <span id="s2-name">SKILL 2</span>
+            <div id="cd-2" class="cd-overlay"></div>
+        </button>
+        <button onclick="useSkill(3)" style="border-color:#ffaa00; color:#ffaa00">
+            <span id="s3-name">ULTIMATE</span>
+            <div id="cd-3" class="cd-overlay"></div>
+        </button>
+    </div>
+</div>
+</body>
+</html>
