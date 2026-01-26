@@ -1,4 +1,5 @@
 module.exports = async function(command, args, msg, user, db, sock) {
+    if (command !== 'catur') return;
     const sender = msg.author || msg.from; 
     
     // 1. Validasi Taruhan
@@ -12,14 +13,12 @@ module.exports = async function(command, args, msg, user, db, sock) {
         return msg.reply(`❌ Uangmu kurang! Saldo: ${user.balance}, butuh: ${bet}`);
     }
 
-    // 3. Potong Saldo (Biar gak kabur)
+    // 3. Potong Saldo
     user.balance -= bet;
     
-    // 4. BUAT LINK (ANTI ERROR SLASH)
-    // Ambil URL dari Koyeb atau Localhost
+    // 4. BUAT LINK 
     let baseUrl = process.env.APP_URL || "http://localhost:3000";
     
-   
     if (baseUrl.endsWith('/')) {
         baseUrl = baseUrl.slice(0, -1);
     }
