@@ -18,7 +18,7 @@ export class ChessView {
                 const square = document.createElement('div');
                 square.classList.add('square');
                 
-                // Tentukan Warna Kotak Belang-Belang
+                // Tentukan Warna Kotak
                 const isWhiteSquare = (r + c) % 2 === 0;
                 square.classList.add(isWhiteSquare ? 'white' : 'black');
                 
@@ -35,16 +35,25 @@ export class ChessView {
                     const pieceSpan = document.createElement('span');
                     pieceSpan.innerText = this.pieces[pieceChar] || pieceChar;
                     
-                    // Style Bidak Agar Kontras
+                    // --- PERBAIKAN WARNA (HIGH CONTRAST) ---
                     const isWhitePiece = pieceChar === pieceChar.toUpperCase();
                     
-                    // Bidak Putih = Warna Putih + Outline Hitam Tipis
-                    // Bidak Hitam = Warna Hitam Total
-                    pieceSpan.style.color = isWhitePiece ? '#ffffff' : '#000000';
-                    
+                    // Bikin font lebih tebal
+                    pieceSpan.style.fontWeight = '900'; 
+                    pieceSpan.style.lineHeight = '1';
+
                     if (isWhitePiece) {
-                        // Bayangan hitam biar kelihatan di kotak terang
-                        pieceSpan.style.textShadow = '0px 0px 2px #000'; 
+                        // BIDAK PUTIH: Warna Putih Bersih + Outline Hitam Tebal
+                        pieceSpan.style.color = '#ffffff';
+                        pieceSpan.style.textShadow = 
+                            '2px 0 #000, -2px 0 #000, 0 2px #000, 0 -2px #000, ' +
+                            '1px 1px #000, -1px -1px #000, 1px -1px #000, -1px 1px #000';
+                    } else {
+                        // BIDAK HITAM: Warna Hitam Pekat + Glow Putih Tipis
+                        // (Supaya tetap kelihatan jelas di kotak hijau gelap)
+                        pieceSpan.style.color = '#000000';
+                        pieceSpan.style.textShadow = 
+                            '1px 1px 0 rgba(255,255,255,0.7), -1px -1px 0 rgba(255,255,255,0.7)';
                     }
                     
                     square.appendChild(pieceSpan);
