@@ -3,10 +3,9 @@ import { Rules } from './rules.js';
 export class ChessAI {
     constructor(board) {
         this.board = board;
-        // PENTING: Tabel Nilai Posisi (Piece-Square Tables)
-        // Bot jadi tahu kalau Kuda bagus di tengah, tapi Pion bagus kalau maju.
+        // Tabel Nilai Posisi (Piece-Square Tables)
         this.pst = {
-            p: [ // Pion lebih suka maju
+            p: [ 
                 [0,  0,  0,  0,  0,  0,  0,  0],
                 [50, 50, 50, 50, 50, 50, 50, 50],
                 [10, 10, 20, 30, 30, 20, 10, 10],
@@ -16,7 +15,7 @@ export class ChessAI {
                 [5, 10, 10,-20,-20, 10, 10,  5],
                 [0,  0,  0,  0,  0,  0,  0,  0]
             ],
-            n: [ // Kuda (Knight) suka di tengah (Centralize)
+            n: [ 
                 [-50,-40,-30,-30,-30,-30,-40,-50],
                 [-40,-20,  0,  0,  0,  0,-20,-40],
                 [-30,  0, 10, 15, 15, 10,  0,-30],
@@ -25,8 +24,7 @@ export class ChessAI {
                 [-30,  5, 10, 15, 15, 10,  5,-30],
                 [-40,-20,  0,  5,  5,  0,-20,-40],
                 [-50,-40,-30,-30,-30,-30,-40,-50]
-            ],
-            // (Bisa ditambahkan untuk gajah/benteng, tapi Pion & Kuda paling krusial buat strategi awal)
+            ]
         };
     }
 
@@ -37,16 +35,10 @@ export class ChessAI {
             return moves[Math.floor(Math.random() * moves.length)];
         }
 
-        // LEVEL 2: SEDANG (Depth 2 - Cukup jeli tapi tidak strategis)
-        if (level === 2) {
-            return this.minimaxRoot(2, color, true);
-        }
-
-        // LEVEL 3: SULIT (Depth 3 + Strategi Posisi)
-        // Menggunakan Alpha-Beta Pruning biar mikirnya cepat
-        if (level === 3) {
-            return this.minimaxRoot(3, color, true);
-        }
+        // LEVEL 2 & 3: MIKIR (Minimax)
+        // Level 3 lebih dalam (3 langkah ke depan), Level 2 cuma 2 langkah
+        const depth = (level === 3) ? 3 : 2;
+        return this.minimaxRoot(depth, color, true);
     }
 
     // Fungsi Akar Minimax (Langkah Awal)
@@ -55,16 +47,20 @@ export class ChessAI {
         let bestMove = null;
         let bestValue = isMaximizing ? -Infinity : Infinity;
 
-        // Kita acak urutan moves biar bot gak monoton kalau nilainya sama
-        moves.sort(() => Math.random() - 0.5);
+        moves.sort(() => Math.random() - 0.5); // Acak biar tidak kaku
 
         for (const move of moves) {
-            const tempBoard = this.board.clone();
-            const promo = (move.piece.toLowerCase() === 'p' && (move.row===0 || move.row===7)) ? 'q' : null;
+            // WAJIB: board.js harus punya fungsi clone()
+            const tempBoard = this.board.clone(); 
+            
+            // --- FIX PROMOSI WARNA ---
+            let promo = null;
+            if (move.piece.toLowerCase() === 'p' && (move.row === 0 || move.row === 7)) {
+                promo = (color === 'white') ? 'Q' : 'q';
+            }
+            
             tempBoard.movePiece(move.fromRow, move.fromCol, move.row, move.col, promo);
 
-            // Panggil Minimax Rekursif
-            // Alpha: -Infinity, Beta: Infinity
             const value = this.minimax(tempBoard, depth - 1, -Infinity, Infinity, !isMaximizing, color);
 
             if (isMaximizing) {
@@ -78,7 +74,6 @@ export class ChessAI {
 
     // Algoritma Minimax dengan Alpha-Beta Pruning
     minimax(board, depth, alpha, beta, isMaximizing, myColor) {
-        // Base Case: Kalau kedalaman 0, hitung skor papan saat ini
         if (depth === 0) {
             return this.evaluateBoard(board, myColor);
         }
@@ -86,25 +81,29 @@ export class ChessAI {
         const turnColor = isMaximizing ? myColor : (myColor === 'white' ? 'black' : 'white');
         const moves = this.getAllValidMoves(board, turnColor);
 
-        // Kalau Skakmat / Remis
+        // Cek Skakmat / Remis
         if (moves.length === 0) {
             if (Rules.isKingInCheck(board, turnColor)) {
-                return isMaximizing ? -9999 : 9999; // Skakmat nilainya gede banget
+                return isMaximizing ? -9999 : 9999; 
             }
-            return 0; // Remis
+            return 0; 
         }
 
         if (isMaximizing) {
             let maxEval = -Infinity;
             for (const move of moves) {
                 const tempBoard = board.clone();
-                const promo = (move.piece.toLowerCase() === 'p' && (move.row===0 || move.row===7)) ? 'q' : null;
+                
+                // FIX PROMOSI DI REKURSIF
+                let promo = null;
+                if (move.piece.toLowerCase() === 'p' && (move.row === 0 || move.row === 7)) {
+                    promo = (turnColor === 'white') ? 'Q' : 'q';
+                }
+
                 tempBoard.movePiece(move.fromRow, move.fromCol, move.row, move.col, promo);
 
                 const evalVal = this.minimax(tempBoard, depth - 1, alpha, beta, false, myColor);
                 maxEval = Math.max(maxEval, evalVal);
-                
-                // Alpha-Beta Pruning (Potong cabang yang gak guna)
                 alpha = Math.max(alpha, evalVal);
                 if (beta <= alpha) break; 
             }
@@ -113,12 +112,17 @@ export class ChessAI {
             let minEval = Infinity;
             for (const move of moves) {
                 const tempBoard = board.clone();
-                const promo = (move.piece.toLowerCase() === 'p' && (move.row===0 || move.row===7)) ? 'q' : null;
+
+                // FIX PROMOSI DI REKURSIF
+                let promo = null;
+                if (move.piece.toLowerCase() === 'p' && (move.row === 0 || move.row === 7)) {
+                    promo = (turnColor === 'white') ? 'Q' : 'q';
+                }
+
                 tempBoard.movePiece(move.fromRow, move.fromCol, move.row, move.col, promo);
 
                 const evalVal = this.minimax(tempBoard, depth - 1, alpha, beta, true, myColor);
                 minEval = Math.min(minEval, evalVal);
-                
                 beta = Math.min(beta, evalVal);
                 if (beta <= alpha) break;
             }
@@ -153,18 +157,13 @@ export class ChessAI {
                 if (piece) {
                     const type = piece.toLowerCase();
                     const isWhite = piece === piece.toUpperCase();
-                    
-                    // 1. Nilai Material (Bidak)
                     let value = pieceVal[type] || 0;
 
-                    // 2. Nilai Posisi (PST) - Hanya dipakai di Level 3 ke atas
-                    // Kita cek apakah ada tabel strategi untuk bidak ini
                     if (this.pst[type]) {
-                        // Kalau putih, pakai tabel normal. Kalau hitam, tabel harus dibalik (mirror)
                         if (isWhite) {
                             value += this.pst[type][r][c];
                         } else {
-                            value += this.pst[type][7-r][c]; // Balik baris untuk hitam
+                            value += this.pst[type][7-r][c]; 
                         }
                     }
 
