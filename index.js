@@ -24,6 +24,8 @@ const robCmd = require('./commands/rob');
 const wikiKnowCmd = require('./commands/WikiKnow'); 
 const adminCmd = require('./commands/admin');       
 const aiCmd = require('./commands/ai');   
+const slitherCmd = require('./commands/slither_bridge');
+const rpgCmd = require('./commands/rpg_bridge');
 const minesCmd = require('./commands/mines');
 const duelCmd = require('./commands/duel');
 const toolsCmd = require('./commands/tools');   
@@ -423,6 +425,8 @@ async function startBot() {
             await ttsCmd(command, args, msg).catch(e => console.error("Error TTS:", e.message));
             await wikiKnowCmd(command, args, msg).catch(e => console.error("Error WikiKnow:", e.message));
             await adminCmd(command, args, msg, user, db).catch(e => console.error("Error Admin:", e.message));
+            await rpgCmd(command, args, msg, user, db).catch(e => console.error("Error RPG:", e.message));
+            await slitherCmd(command, args, msg, user, db).catch(e => console.error("Error Slither:", e.message));
             await aiCmd(command, args, msg, user, db).catch(e => console.error("Error AI:", e.message));
             await caturCmd(command, args, msg, user, db, sock).catch(e => console.error("Error Catur:", e.message));
             await imageCmd(command, args, msg, user, db, sock).catch(e => console.error("Error Image:", e.message));
@@ -636,6 +640,7 @@ async function startBot() {
 }
 
 startBot();
+
 
 
 
