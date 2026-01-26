@@ -49,7 +49,7 @@ module.exports = async (command, args, msg, user, db) => {
         // A. Cek Expired (Kode cuma valid 5 menit)
         if (now - timestamp > 5 * 60 * 1000) return msg.reply("❌ Kode Kadaluarsa! Main lagi sana.");
 
-        // B. Cek Replay Attack (Kode gak bisa dipake 2x)
+        // B. Kode gak bisa dipake 2x
         if (user.lastClaimCode === code) return msg.reply("❌ Kode sudah pernah diklaim!");
 
         // C. VERIFIKASI KEAMANAN (ANTI CHEAT)
