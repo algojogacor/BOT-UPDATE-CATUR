@@ -583,6 +583,8 @@ async function startBot() {
 • !bom <bet> !stop (Minesweeper)
 • !rolet <pilihan> <bet>
 • !catur <bet>
+• !rpg (Turn-based Game)
+
 
 ⚽ *SPORT BETTING*
 • !updatebola | !bola | !topbola | !resultbola
@@ -633,6 +635,7 @@ async function startBot() {
 }
 
 startBot();
+
 
 
 
