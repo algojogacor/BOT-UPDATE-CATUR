@@ -1,0 +1,86 @@
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #2c3e50; /* Warna Background Gelap */
+    color: white;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    margin: 0;
+    padding: 10px;
+    box-sizing: border-box;
+}
+
+.container { 
+    text-align: center; 
+    width: 100%;
+    max-width: 500px;
+}
+
+h1 { 
+    margin-bottom: 10px; 
+    font-size: 22px; 
+    color: #f1c40f; 
+    text-shadow: 2px 2px 0px #000;
+}
+
+.controls { margin-bottom: 15px; }
+select { padding: 8px; border-radius: 5px; background: #ecf0f1; border: none; }
+
+.status-box {
+    margin-bottom: 10px;
+    font-weight: bold;
+    background: rgba(0,0,0,0.3);
+    padding: 5px;
+    border-radius: 4px;
+}
+
+/* --- PAPAN CATUR (RESPONSIF) --- */
+#chessboard {
+    display: grid;
+    /* Default untuk HP: Kotak ukuran 42px */
+    grid-template-columns: repeat(8, 42px);
+    grid-template-rows: repeat(8, 42px);
+    border: 5px solid #34495e;
+    margin: 0 auto;
+    width: fit-content;
+    background-color: #95a5a6;
+    box-shadow: 0 10px 20px rgba(0,0,0,0.5);
+}
+
+.square {
+    width: 42px;
+    height: 42px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 28px; /* Ukuran Bidak */
+    cursor: pointer;
+    user-select: none;
+}
+
+/* Kalau layar agak lebar (Tablet/Laptop), perbesar papan */
+@media (min-width: 500px) {
+    #chessboard {
+        grid-template-columns: repeat(8, 60px);
+        grid-template-rows: repeat(8, 60px);
+    }
+    .square {
+        width: 60px;
+        height: 60px;
+        font-size: 40px;
+    }
+}
+
+/* Warna Kotak */
+.white { background-color: #ecf0f1; color: black; }
+.black { background-color: #7f8c8d; color: black; }
+
+/* Efek Interaktif */
+.selected { background-color: #f1c40f !important; } /* Kuning saat diklik */
+.possible-move::after {
+    content: '';
+    width: 30%; height: 30%;
+    background-color: rgba(46, 204, 113, 0.8); /* Titik hijau langkah */
+    border-radius: 50%;
+}
