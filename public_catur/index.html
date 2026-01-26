@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Catur vs Bot Arya</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <h1>♞ Catur vs Bot Arya ♞</h1>
+        
+        <div class="controls">
+            <label for="difficulty">Kecerdasan Bot: </label>
+            <select id="difficulty">
+                <option value="1">Level 1 (Mudah/Random)</option>
+                <option value="2" selected>Level 2 (Normal)</option>
+                <option value="3">Level 3 (Sulit/Mikir)</option>
+            </select>
+        </div>
+
+        <div id="status" class="status-box">Giliran: Putih (Kamu)</div>
+
+        <div id="chessboard"></div>
+        
+        <p style="font-size: 12px; color: #bbb; margin-top: 10px;">
+            *Jangan refresh halaman atau progres hilang!
+        </p>
+    </div>
+
+    <script type="module" src="main.js"></script>
+</body>
+</html>
