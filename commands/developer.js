@@ -7,7 +7,7 @@ const fmt = (num) => Math.floor(Number(num)).toLocaleString('id-ID');
 // Masukkan ID WhatsApp kamu di sini.
 // Format: "NOMOR@s.whatsapp.net" (tanpa spasi/tanda +)
 const ALLOWED_DEVELOPERS = [
-    "628999021644@s.whatsapp.net", // Nomor Utama (Arya)
+    "244203384742140@lid", // Nomor Utama (Arya)
    // "6281234567890@s.whatsapp.net"   
 ];
 
