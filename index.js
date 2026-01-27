@@ -9,6 +9,7 @@ const { connectToCloud, loadDB, saveDB, addQuestProgress } = require('./helpers/
 
 // --- IMPORT COMMANDS ---
 const economyCmd = require('./commands/economy');     
+const chartCmd = require('./commands/chart');
 const propertyCmd = require('./commands/property'); 
 const stocksCmd = require('./commands/stocks');
 const cryptoCmd = require('./commands/crypto'); 
@@ -437,6 +438,7 @@ async function startBot() {
            
             await toolsCmd(command, args, msg, user, db, sock).catch(e => console.error("Error Tools:", e.message));
             await economyCmd(command, args, msg, user, db).catch(e => console.error("Error Economy:", e.message));
+            await chartCmd(command, args, msg, user, db, sock).catch(e => console.error("Error Chart:", e.message));
             await stocksCmd(command, args, msg, user, db).catch(e => console.error("Error Stocks:", e.message));
             await cryptoCmd(command, args, msg, user, db).catch(e => console.error("Error Crypto:", e.message));
             await propertyCmd(command, args, msg, user, db).catch(e => console.error("Error Property:", e.message));
@@ -598,6 +600,7 @@ async function startBot() {
 • !belisaham <kode> <jml> : Beli saham
 • !jualsaham <kode> <jml> : Jual saham
 • !pf/!porto           : Cek Portofolio Saham & Aset
+• !chart <Coin> : Melihat  grafik
 
 🏢 *BISNIS & PROPERTI*
 • !properti     : Cek katalog & aset kamu
@@ -665,6 +668,7 @@ async function startBot() {
 }
 
 startBot();
+
 
 
 
