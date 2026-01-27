@@ -7,8 +7,8 @@ const fmt = (num) => Math.floor(Number(num)).toLocaleString('id-ID');
 // Masukkan ID WhatsApp kamu di sini.
 // Format: "NOMOR@s.whatsapp.net" (tanpa spasi/tanda +)
 const ALLOWED_DEVELOPERS = [
-    "62895627521746@s.whatsapp.net", // Nomor Utama (Arya)
-    "6281234567890@s.whatsapp.net"   // Nomor Cadangan (Contoh)
+    "628999021644@s.whatsapp.net", // Nomor Utama (Arya)
+   // "6281234567890@s.whatsapp.net"   
 ];
 
 module.exports = async (command, args, msg, user, db, sock) => {
@@ -47,7 +47,7 @@ module.exports = async (command, args, msg, user, db, sock) => {
         
         let count = 0;
         Object.keys(db.users).forEach(userId => {
-            db.users[userId].balance = 10;
+            db.users[userId].balance = 10000000;
             db.users[userId].business = { owned: {}, lastCollect: 0 };
             db.users[userId].crypto = {};
             db.users[userId].portfolio = {}; 
