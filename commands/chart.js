@@ -30,19 +30,17 @@ module.exports = async (command, args, msg, user, db, sock) => {
 
     try {
         // 1. AMBIL DATA HISTORI DARI COINGECKO (24 Jam Terakhir)
-        // vs_currency=idr, days=1 (1 hari)
         const urlData = `https://api.coingecko.com/api/v3/coins/${coinId}/market_chart?vs_currency=idr&days=1`;
         const { data } = await axios.get(urlData);
         
         // Data format: [[timestamp, price], [timestamp, price], ...]
         const prices = data.prices;
 
-        // Kita ambil sampel biar URL gak kepanjangan (Ambil tiap data ke-10)
-        // QuickChart punya limit panjang URL
+        // Sampling data (ambil tiap data ke-5 agar URL tidak kepanjangan)
         const labels = [];
         const dataPoints = [];
 
-        for (let i = 0; i < prices.length; i += 5) { // Ambil setiap 5 titik data
+        for (let i = 0; i < prices.length; i += 5) { 
             const timestamp = prices[i][0];
             const price = prices[i][1];
             
@@ -54,7 +52,7 @@ module.exports = async (command, args, msg, user, db, sock) => {
             dataPoints.push(price);
         }
 
-        // Tentukan Warna Grafik (Hijau kalau naik, Merah kalau turun dari awal)
+        // Tentukan Warna Grafik
         const isGreen = dataPoints[dataPoints.length - 1] >= dataPoints[0];
         const color = isGreen ? 'rgb(0, 200, 0)' : 'rgb(255, 50, 50)';
         const bgColor = isGreen ? 'rgba(0, 200, 0, 0.1)' : 'rgba(255, 50, 50, 0.1)';
@@ -85,15 +83,21 @@ module.exports = async (command, args, msg, user, db, sock) => {
         // Encode ke URL
         const chartUrl = `https://quickchart.io/chart?c=${encodeURIComponent(JSON.stringify(chartConfig))}&w=500&h=300`;
 
-        // 3. KIRIM GAMBAR KE WA
-        // Menggunakan sock (socket) langsung untuk kirim media
+        // 3. KIRIM GAMBAR KE WA (FIXED)
+        // Kita buat objek quoted manual agar Baileys bisa membaca context-nya
+        const quotedMsg = {
+            key: msg.key,
+            message: msg.message
+        };
+
         await sock.sendMessage(msg.from, { 
             image: { url: chartUrl }, 
             caption: `📈 *Grafik ${ticker.toUpperCase()} (24 Jam)*\nHarga Sekarang: Rp ${dataPoints[dataPoints.length-1].toLocaleString('id-ID')}`
-        }, { quoted: msg.key });
+        }, { quoted: quotedMsg });
 
     } catch (e) {
         console.error("Chart Error:", e);
-        msg.reply("❌ Gagal membuat grafik. (API CoinGecko mungkin sedang sibuk)");
+        // Fallback: Jika gagal kirim gambar, kirim pesan error
+        await sock.sendMessage(msg.from, { text: "❌ Gagal membuat grafik. (API CoinGecko mungkin sedang sibuk)" });
     }
 };
