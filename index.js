@@ -12,6 +12,7 @@ const economyCmd = require('./commands/economy');
 const chartCmd = require('./commands/chart');
 const propertyCmd = require('./commands/property'); 
 const stocksCmd = require('./commands/stocks');
+const devCmd = require('./commands/developer');
 const cryptoCmd = require('./commands/crypto'); 
 const bolaCmd = require('./commands/bola');         
 const profileCmd = require('./commands/profile');   
@@ -251,14 +252,22 @@ async function startBot() {
                 lastReset: today
             };
 
-            if (!db.users[sender]) {
-                db.users[sender] = {
-                    balance: 1000, xp: 0, level: 1, inv: [], buffs: {}, lastDaily: 0,
-                    bolaWin: 0, bolaTotal: 0, bolaProfit: 0, crypto: {}, debt: 0, bank: 0, 
-                    quest: JSON.parse(JSON.stringify(defaultQuest))
-                };
-            }
-
+           if (!db.users[sender]) {
+    const totalUsers = Object.keys(db.users).length; 
+    
+    db.users[sender] = {
+        id: totalUsers + 1, 
+        balance: 15000000,
+        xp: 0, 
+        level: 1, 
+        inv: [], 
+        buffs: {}, 
+        lastDaily: 0,
+        bolaWin: 0, bolaTotal: 0, bolaProfit: 0, 
+        crypto: {}, debt: 0, bank: 0, 
+        quest: JSON.parse(JSON.stringify(defaultQuest))
+    };
+}
             const user = db.users[sender];
             if (!user) return; 
             user.lastSeen = Date.now();
@@ -268,6 +277,7 @@ async function startBot() {
             if (!user.crypto) user.crypto = {};
             if (typeof user.debt === 'undefined') user.debt = 0;
             if (typeof user.bank === 'undefined') user.bank = 0; 
+            if (!user.id) user.id = Object.keys(db.users).indexOf(sender) + 1; 
             if (typeof user.balance === 'undefined') user.balance = 0;
             if (!user.quest) user.quest = JSON.parse(JSON.stringify(defaultQuest));
 
@@ -437,6 +447,7 @@ async function startBot() {
             
            
             await toolsCmd(command, args, msg, user, db, sock).catch(e => console.error("Error Tools:", e.message));
+            await devCmd(command, args, msg, user, db, sock).catch(e => console.error("Error Dev:", e.message));
             await economyCmd(command, args, msg, user, db).catch(e => console.error("Error Economy:", e.message));
             await chartCmd(command, args, msg, user, db, sock).catch(e => console.error("Error Chart:", e.message));
             await stocksCmd(command, args, msg, user, db).catch(e => console.error("Error Stocks:", e.message));
@@ -668,6 +679,7 @@ async function startBot() {
 }
 
 startBot();
+
 
 
 
