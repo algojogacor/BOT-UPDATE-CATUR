@@ -1,197 +1,182 @@
+const axios = require('axios'); 
 const { saveDB } = require('../helpers/database');
-
-// FEE BROKER (3%)
-const FEE_BUY = 0.03; 
-
-// INTERVAL UPDATE (5 MENIT)
-const MARKET_INTERVAL = 5 * 60 * 1000; 
 
 // HELPER FORMAT ANGKA
 const fmt = (num) => Math.floor(Number(num)).toLocaleString('id-ID');
 
-// KONFIGURASI SAHAM (REAL WORLD PARAMETERS)
-const STOCKS = {
-    // TIER 1: GORENGAN (High Risk, High Beta)
-    GOTO: { name: "GOTO", base: 10_000_000, beta: 2.5 }, 
-    FREN: { name: "FREN", base: 5_000_000, beta: 3.0 },
-
-    // TIER 2: BLUE CHIP (Penggerak IHSG)
-    TLKM: { name: "TLKM", base: 400_000_000, beta: 1.1 },
-    BBCA: { name: "BBCA", base: 950_000_000, beta: 1.0 }, 
-    BMRI: { name: "BMRI", base: 600_000_000, beta: 1.2 },
-
-    // TIER 3: CYCLICAL (Tergantung Komoditas)
-    GGRM: { name: "GGRM", base: 2_500_000_000, beta: 0.8 },
-    UNTR: { name: "UNTR", base: 2_800_000_000, beta: 1.5 },
-    
-    // INDUKS (Market Maker)
-    IHSG: { name: "IHSG", base: 75_000_000_000, beta: 1.0 }, 
-    BTC:  { name: "BTC", base: 500_000_000_000, beta: 0.2 }
-};
-
-// BERITA PASAR INDONESIA
-const NEWS_POOL = [
-    { txt: "🇮🇩 BI menahan suku bunga acuan. IHSG Stabil.", sent: 0.0 },
-    { txt: "📈 Investor Asing 'Net Buy' Triliunan Rupiah!", sent: 0.02 },
-    { txt: "📉 Rupiah melemah ke Rp 16.000/USD. Market lesu.", sent: -0.015 },
-    { txt: "🔴 Inflasi Indonesia naik di atas ekspektasi.", sent: -0.02 },
-    { txt: "🚀 Laporan keuangan BBCA & BMRI mencetak rekor!", sent: 0.025 },
-    { txt: "☠️ Isu Gagal Bayar emiten konstruksi BUMN.", sent: -0.03 },
-    { txt: "🥬 Harga komoditas Batubara & CPO anjlok.", sent: -0.01 },
-    { txt: "🏢 Window Dressing akhir tahun dimulai!", sent: 0.03 }
+// DAFTAR SAHAM (TIKER IDX)
+// Kamu bisa tambah emiten lain sesuka hati
+const STOCK_LIST = [
+    'BBCA', 'BBRI', 'BMRI', 'TLKM', 'ASII', 
+    'UNTR', 'GOTO', 'FREN', 'ANTM', 'ADRO'
 ];
 
-// --- LOGIKA PASAR (IHSG DRIVEN) ---
-const getStockData = (ticker) => {
-    const config = STOCKS[ticker];
+module.exports = async (command, args, msg, user, db) => {
+    // Init User Database
+    if (typeof user.balance === 'undefined') user.balance = 0;
+    if (typeof user.portfolio === 'undefined') user.portfolio = {};
+
+    // Init Market Database
+    if (!db.stockMarket) db.stockMarket = { prices: {}, lastUpdate: 0 };
+    
+    const market = db.stockMarket;
     const now = Date.now();
     
-    // Seed Waktu (Berubah tiap 5 menit)
-    // Harga KUNCI selama 5 menit 
-    const timeSeed = Math.floor(now / MARKET_INTERVAL); 
+    // Update tiap 1 menit
+    const CACHE_TIME = 60 * 1000; 
 
-    // 1. Tentukan Sentimen IHSG (Pasar Global)
-    // Menggunakan random yang konsisten berdasarkan timeSeed
-    const rng = Math.sin(timeSeed * 999); // Angka acak -1 s/d 1
-    const newsIndex = Math.abs(timeSeed) % NEWS_POOL.length;
-    const activeNews = NEWS_POOL[newsIndex];
+    // ============================================================
+    // 📡 FETCH REAL DATA (IDX INDONESIA)
+    // ============================================================
+    if (now - market.lastUpdate > CACHE_TIME) {
+        try {
+            // Kita ambil data per ticker
+            for (const ticker of STOCK_LIST) {
+        
+                const url = `https://api.goapi.id/v1/stock/idx/${ticker}`;
+                
+            
+                await new Promise(r => setTimeout(r, 500)); 
 
-    // Pergerakan Dasar IHSG (Sentiment + Random Noise)
-    const ihsgMove = activeNews.sent + (rng * 0.005); 
+                const response = await axios.get(url, {
+                    headers: { 'accept': 'application/json' }
+                
+                    // 'X-API-KEY': 'YOUR_API_KEY
+                });
 
-    // 2. Tentukan Pergerakan Saham Spesifik
-    let stockMove = 0;
+                const data = response.data.data;
+                
+                if (data) {
+                    market.prices[ticker] = {
+                        price: data.last_price || data.close_price, // Harga Terakhir
+                        change: data.change_percent || 0, // Persentase Perubahan
+                        name: data.company_name
+                    };
+                }
+            }
 
-    if (ticker === 'BTC') {
-        // BTC jalan sendiri (Crypto correlation)
-        stockMove = Math.sin(timeSeed * 123) * 0.05; 
-    } else {
-        // Saham mengikuti IHSG dikali Beta
-        const uniqueNoise = Math.cos(timeSeed * config.name.length) * 0.01;
-        stockMove = (ihsgMove * config.beta) + uniqueNoise;
+            market.lastUpdate = now;
+            saveDB(db);
+            // console.log("✅ Stock Market Data Updated");
+
+        } catch (error) {
+            console.error("❌ Gagal update saham (Mungkin Market Tutup/Limit):", error.message);
+            // Bot akan pakai harga terakhir di database
+        }
     }
 
-    // 3. Hitung Harga Final
-    let currentPrice = Math.floor(config.base * (1 + stockMove));
-
-    // KRISIS MONETER DISKON 50%
-    const isCrisis = (timeSeed % 100 === 0);
-    if (isCrisis) currentPrice = Math.floor(currentPrice * 0.5); 
-
-    // Tentukan Warna
-    let icon = '➡️'; 
-    if (stockMove > 0.01) icon = '🚀';
-    else if (stockMove > 0) icon = '🟢';
-    else if (stockMove < -0.01) icon = '🩸';
-    else if (stockMove < 0) icon = '🔴';
-
-    return {
-        price: Math.max(1000, currentPrice),
-        trend: icon,
-        news: activeNews.txt,
-        change: (stockMove * 100).toFixed(2),
-        isCrisis: isCrisis
-    };
-};
-
-module.exports = async (command, args, msg, user, db) => {
     const validCommands = ['saham', 'stock', 'market', 'belisaham', 'buystock', 'jualsaham', 'sellstock', 'porto', 'dividen', 'claim'];
     if (!validCommands.includes(command)) return;
 
-    if (!user.portfolio) user.portfolio = {};
+    // ============================================================
+    // COMMANDS
+    // ============================================================
 
-    // 1. MARKET 
+    // 1. MARKET UI (REAL TIME)
     if (command === 'saham' || command === 'stock' || command === 'market') {
-        const now = Date.now();
-        const nextTime = Math.ceil(now / MARKET_INTERVAL) * MARKET_INTERVAL;
-        const diff = nextTime - now;
-        const m = Math.floor(diff / 60000);
-        const s = Math.floor((diff % 60000) / 1000);
-
-        // Ambil Data IHSG untuk Berita Utama
-        const ihsgData = getStockData('IHSG');
-
-        let txt = ihsgData.isCrisis 
-            ? `🚨 *KRISIS MONETER (IHSG ANJLOK)* 🚨\n`
-            : `📈 *BURSA EFEK INDONESIA (BEI)* 📉\n`;
+        // Cek Jam Bursa (Senin-Jumat, 09:00 - 16:00 WIB)
+        const date = new Date();
+        const hour = date.getHours() + 7; // WIB
+        const day = date.getDay();
+        const isMarketOpen = (day >= 1 && day <= 5) && (hour >= 9 && hour < 16);
         
-        txt += `📰 "${ihsgData.news}"\n`;
-        txt += `⏳ Update: ${m}m ${s}s (Harga Terkunci)\n`;
+        let statusPasar = isMarketOpen ? '🟢 BUKA' : '🔴 TUTUP';
+
+        let txt = `📈 *BURSA EFEK INDONESIA (IDX)*\n`;
+        txt += `Status: ${statusPasar} (Real-Time Data)\n`;
         txt += `------------------\n`;
 
-        for (let [ticker, data] of Object.entries(STOCKS)) {
-            const { price, trend, change } = getStockData(ticker);
-            // Tampilan: Icon KODE: Harga (Persen)
-            txt += `${trend} *${ticker}*: Rp ${fmt(price)} (${change}%)\n`;
+        let naik = 0; let turun = 0;
+
+        for (const ticker of STOCK_LIST) {
+            const data = market.prices[ticker];
+            if (data) {
+                const isGreen = data.change >= 0;
+                const icon = isGreen ? '🟢' : '🔴';
+                const sign = isGreen ? '+' : '';
+                
+                // Format: 🟢 BBCA: Rp 10.200 (+1.5%)
+                txt += `${icon} *${ticker}*: Rp ${fmt(data.price)} (${sign}${data.change}%) \n`;
+
+                if(isGreen) naik++; else turun++;
+            }
         }
         
-        txt += `\n💰 Saldo: Rp ${fmt(user.balance)}`;
-        txt += `\n💡 \`!belisaham <code> <qty>\``;
+        txt += `------------------\n`;
+        txt += `📊 ${naik} Naik, ${turun} Turun\n`;
+        txt += `💰 Saldo: Rp ${fmt(user.balance)}\n`;
+        txt += `💡 \`!belisaham <kode> <lembar>\``;
         return msg.reply(txt);
     }
 
-    // 2. BUY (BELI LEMBAR)
+    // 2. BELI SAHAM (REAL PRICE)
     if (command === 'belisaham' || command === 'buystock') {
         const ticker = args[0]?.toUpperCase();
         let qtyRaw = args[1];
 
-        if (!STOCKS[ticker]) return msg.reply("❌ Kode emiten salah.");
+        if (!STOCK_LIST.includes(ticker)) return msg.reply(`❌ Saham tidak terdaftar. List: ${STOCK_LIST.join(', ')}`);
+        if (!market.prices[ticker]) return msg.reply("❌ Data harga sedang loading... coba lagi.");
         
+        const price = market.prices[ticker].price;
         let qty = parseInt(qtyRaw);
-        const { price } = getStockData(ticker);
 
+        // Fitur beli Max
         if (qtyRaw === 'max' || qtyRaw === 'all') {
-            qty = Math.floor(user.balance / (price * (1 + FEE_BUY)));
-            if (qty < 1) return msg.reply(`❌ Uang tidak cukup.`);
+            // Fee Broker 0.3%
+            const maxBuy = Math.floor(user.balance / (price * 1.003)); 
+            qty = maxBuy;
         }
 
-        if (isNaN(qty) || qty < 1) return msg.reply("❌ Jumlah lembar salah.");
+        if (isNaN(qty) || qty < 1) return msg.reply("❌ Jumlah lembar salah (Min 1 lembar).");
 
         const rawCost = price * qty;
-        const fee = Math.floor(rawCost * FEE_BUY);
+        const fee = Math.floor(rawCost * 0.003); // Fee Broker 0.3%
         const total = rawCost + fee;
 
-        if (user.balance < total) return msg.reply(`❌ Uang kurang Rp ${fmt(total - user.balance)}`);
+        if (user.balance < total) return msg.reply(`❌ Uang kurang! Butuh Rp ${fmt(total)}`);
 
         user.balance -= total;
 
         if (!user.portfolio[ticker]) user.portfolio[ticker] = { qty: 0, avg: 0 };
         const p = user.portfolio[ticker];
         
-        // Average Down Calculator
-        p.avg = Math.floor(((p.qty * p.avg) + rawCost) / (p.qty + qty));
+        // Rumus Average Down
+        // (Total Nilai Lama + Total Beli Baru) / Total Lembar Baru
+        const oldVal = p.qty * p.avg;
+        p.avg = Math.floor((oldVal + rawCost) / (p.qty + qty));
         p.qty += qty;
 
         saveDB(db);
-        return msg.reply(`✅ *BUY ORDER MATCHED*\nEmiten: ${ticker}\nVol: ${fmt(qty)} Lot\nPrice: Rp ${fmt(price)}\nFee (3%): Rp ${fmt(fee)}\n📉 Total: Rp ${fmt(total)}`);
+        return msg.reply(`✅ *ORDER MATCHED*\nEmiten: ${ticker}\nVol: ${fmt(qty)} Lembar\nHarga: Rp ${fmt(price)}\nFee: Rp ${fmt(fee)}\n📉 Total Bayar: Rp ${fmt(total)}`);
     }
 
-    // 3. SELL (PAJAK PROGRESIF)
+    // 3. JUAL SAHAM (REAL PRICE + PAJAK)
     if (command === 'jualsaham' || command === 'sellstock') {
         const ticker = args[0]?.toUpperCase();
         let qty = args[1];
 
         if (!user.portfolio[ticker] || user.portfolio[ticker].qty <= 0) return msg.reply("❌ Gak punya saham ini.");
-
+        
         const p = user.portfolio[ticker];
         if (qty === 'all') qty = p.qty;
         qty = parseInt(qty);
 
         if (isNaN(qty) || qty < 1 || qty > p.qty) return msg.reply("❌ Jumlah salah/kurang.");
 
-        const { price } = getStockData(ticker);
+        const price = market.prices[ticker].price;
         const gross = price * qty;
 
-        // --- PAJAK PROGRESIF ---
-        let rate = 0.05; // 5% Standard
-        if (user.balance > 100_000_000_000_000) rate = 0.30; // >100T Pajak 30%
-        else if (user.balance > 10_000_000_000_000) rate = 0.20; // >10T Pajak 20%
+        // PAJAK PROGRESIF
+        let taxRate = 0.05; // 5% Standard
+        if (user.balance > 100_000_000_000_000) taxRate = 0.30; // 30% 
 
-        const tax = Math.floor(gross * rate);
+        const tax = Math.floor(gross * taxRate);
         const net = gross - tax;
 
-        const profit = net - (p.avg * qty);
-        const pct = ((profit / (p.avg * qty)) * 100).toFixed(2);
+        // Hitung Profit/Loss
+        const modal = p.avg * qty;
+        const profit = net - modal;
+        const pct = ((profit / modal) * 100).toFixed(2);
         const status = profit >= 0 ? '🟢 Cuan' : '🔴 Boncos';
 
         user.balance += net;
@@ -199,24 +184,25 @@ module.exports = async (command, args, msg, user, db) => {
         if (p.qty === 0) delete user.portfolio[ticker];
 
         saveDB(db);
-        return msg.reply(`✅ *SELL ORDER MATCHED*\nEmiten: ${ticker}\nVol: ${fmt(qty)} Lot\nPrice: Rp ${fmt(price)}\n\n💰 Gross: Rp ${fmt(gross)}\n💸 Tax (${rate*100}%): Rp ${fmt(tax)}\n💵 *Net: Rp ${fmt(net)}*\n\n📊 P/L: ${status} Rp ${fmt(profit)} (${pct}%)`);
+        return msg.reply(`✅ *SELL ORDER DONE*\nEmiten: ${ticker}\nVol: ${fmt(qty)} Lembar\nHarga: Rp ${fmt(price)}\n\n💰 Gross: Rp ${fmt(gross)}\n💸 Tax (${taxRate*100}%): Rp ${fmt(tax)}\n💵 *Net: Rp ${fmt(net)}*\n\n📊 P/L: ${status} Rp ${fmt(profit)} (${pct}%)`);
     }
 
     // 4. PORTO (VALUASI REAL-TIME)
     if (command === 'porto' || command === 'pf') {
-        let txt = `💼 *PORTOFOLIO EFEK*\n`;
+        let txt = `💼 *PORTOFOLIO SAHAM*\n`;
         let totalVal = 0;
         let totalGain = 0;
         let hasStock = false;
 
         // Estimasi Pajak di Display
         let rate = 0.05;
-        if (user.balance > 100_000_000_000_000) rate = 0.50;
-        else if (user.balance > 10_000_000_000_000) rate = 0.20;
+        if (user.balance > 100_000_000_000_000) rate = 0.30;
 
         for (let [ticker, data] of Object.entries(user.portfolio)) {
             if (data.qty > 0) {
-                const { price } = getStockData(ticker); 
+                // Cek harga terkini, kalau error pakai harga beli (avg)
+                const currentData = market.prices[ticker];
+                const price = currentData ? currentData.price : data.avg;
                 
                 const gross = price * data.qty;
                 const net = gross - (gross * rate); // Nilai bersih setelah pajak
@@ -238,34 +224,31 @@ module.exports = async (command, args, msg, user, db) => {
         txt += `━━━━━━━━━━\n`;
         txt += `💰 Aset Bersih: Rp ${fmt(totalVal)}\n`;
         txt += `${totalGain >= 0 ? '📈' : '📉'} Floating P/L: Rp ${fmt(totalGain)}`;
-        txt += `\n_(Valuasi bersih setelah estimasi pajak ${rate*100}%)_`;
-
+        
         return msg.reply(txt);
     }
 
     // 5. DIVIDEN
     if (command === 'dividen' || command === 'claim') {
-        const COOLDOWN = 3600000; 
-        const now = Date.now();
+        const COOLDOWN = 3600000; // 1 Jam
         const diff = now - (user.lastDividend || 0);
 
         if (diff < COOLDOWN) return msg.reply(`⏳ Tunggu ${Math.ceil((COOLDOWN - diff)/60000)} menit.`);
 
         let totalAsset = 0;
         for (let [ticker, data] of Object.entries(user.portfolio)) {
-            if (data.qty > 0) {
-                // Gunakan harga dasar (base) untuk perhitungan dividen agar stabil
-                totalAsset += STOCKS[ticker].base * data.qty;
+            if (data.qty > 0 && market.prices[ticker]) {
+                totalAsset += market.prices[ticker].price * data.qty;
             }
         }
 
         if (totalAsset === 0) return msg.reply("❌ Gak punya saham.");
 
-        const amount = Math.floor(totalAsset * 0.03); // Yield 3%
+        const amount = Math.floor(totalAsset * 0.01);
         user.balance += amount;
         user.lastDividend = now;
         saveDB(db);
 
-        return msg.reply(`💸 *DIVIDEN CAIR*\nBasis Aset: Rp ${fmt(totalAsset)}\nYield: 3%\n💵 *Diterima: Rp ${fmt(amount)}*`);
+        return msg.reply(`💸 *DIVIDEN CAIR*\nTotal Aset: Rp ${fmt(totalAsset)}\nYield: 1%\n💵 *Diterima: Rp ${fmt(amount)}*`);
     }
 };
