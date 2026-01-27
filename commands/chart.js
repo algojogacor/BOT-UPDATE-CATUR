@@ -25,8 +25,8 @@ module.exports = async (command, args, msg, user, db, sock) => {
 
     const coinId = COIN_IDS[ticker];
     
-    // Kirim pesan loading (karena generate gambar butuh 2-3 detik)
-    await msg.reply("⏳ _Sedang menggambar grafik..._");
+    // Kirim pesan loading
+    await msg.reply("⏳ _Sedang membuat grafik..._");
 
     try {
         // 1. AMBIL DATA HISTORI DARI COINGECKO (24 Jam Terakhir)
@@ -71,7 +71,7 @@ module.exports = async (command, args, msg, user, db, sock) => {
                     backgroundColor: bgColor,
                     borderWidth: 2,
                     fill: true,
-                    pointRadius: 0 // Hilangkan titik biar garis mulus
+                    pointRadius: 0 
                 }]
             },
             options: {
