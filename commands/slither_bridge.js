@@ -4,7 +4,7 @@ const crypto = require('crypto');
 // HELPER
 const fmt = (num) => Math.floor(Number(num)).toLocaleString('id-ID');
 
-// 🔑 KUNCI RAHASIA
+// 🔑 KUNCI RAHASIA (WAJIB SAMA DENGAN DI FILE HTML GAME)
 const SECRET_KEY = "ULTRALISK_OMEGA_KEY_2026";
 
 module.exports = async (command, args, msg, user, db) => {
@@ -15,11 +15,11 @@ module.exports = async (command, args, msg, user, db) => {
 
     // 1. LINK GAME
     if (command === 'slither' || command === 'snake') {
-        // GANTI LINK
         const GAME_LINK = "https://papaya-unicorn-f3a5a1.netlify.app/";
 
         let txt = `🐍 *SLITHER SULTAN.IO* 🐍\n\n`;
-        txt += `Makan orb, panjangkan ular, cairkan Triliunan Rupiah!\n`;
+        txt += `Mode: *Hardcore Economy*\n`;
+        txt += `Kumpulkan receh demi receh untuk modal usaha!\n`;
         txt += `👉 *MAIN SEKARANG:* \n${GAME_LINK}\n\n`;
         txt += `_Game Over? Copy kode dan ketik:_ \n\`!claimslither <kode>\``;
 
@@ -40,7 +40,7 @@ module.exports = async (command, args, msg, user, db) => {
         const signature = parts[3];
 
         // Validasi Waktu & Replay
-        if (now - timestamp > 5 * 60 * 1000) return msg.reply("❌ Kode kadaluarsa.");
+        if (now - timestamp > 5 * 60 * 1000) return msg.reply("❌ Kode kadaluarsa (Max 5 menit).");
         if (user.lastSlitherCode === code) return msg.reply("❌ Kode sudah dipakai.");
 
         // Validasi Anti-Cheat
@@ -51,13 +51,17 @@ module.exports = async (command, args, msg, user, db) => {
             return msg.reply("❌ *CHEATER!* Jangan edit skornya bos.");
         }
 
-        // --- 💰 UPDATE HARGA DI SINI 💰 ---
+        // UPDATE HARGA
         
-        // HARGA DASAR: 200 Miliar per Poin Panjang
-        let basePrice = 200_000_000_000; 
+        // RATE MEDIUM (Standard): Rp 500 per cm
+        let basePrice = 500; 
+        let tier = "Medium";
         
-        // BONUS: Jika panjang > 100, harga per poin naik jadi 300 Miliar
-        if (score > 100) basePrice = 300_000_000_000;
+        // RATE HARD (Jika skor > 100): Rp 1.000 per cm
+        if (score > 100) {
+            basePrice = 1_000;
+            tier = "Hard 🔥";
+        }
 
         let reward = score * basePrice;
 
@@ -66,6 +70,6 @@ module.exports = async (command, args, msg, user, db) => {
 
         saveDB(db);
 
-        return msg.reply(`🐍 *GAME OVER!* 🐍\nPanjang Ular: ${score}\nRate: Rp ${fmt(basePrice)} /cm\n\n💰 *Total Cair: Rp ${fmt(reward)}*`);
+        return msg.reply(`🐍 *GAME OVER!* 🐍\nPanjang: ${score} cm\nTier: ${tier} (Rp ${fmt(basePrice)}/cm)\n\n💰 *Cair: Rp ${fmt(reward)}*`);
     }
 };
