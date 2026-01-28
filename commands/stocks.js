@@ -4,7 +4,7 @@ const { saveDB } = require('../helpers/database');
 // HELPER FORMAT ANGKA
 const fmt = (num) => Math.floor(Number(num)).toLocaleString('id-ID');
 
-// DAFTAR SAHAM (Tetap pakai format .JK)
+// DAFTAR SAHAM
 const STOCK_MAPPING = {
     'BBCA': 'BBCA.JK',
     'BBRI': 'BBRI.JK',
@@ -31,13 +31,13 @@ module.exports = async (command, args, msg, user, db) => {
     const CACHE_TIME = 60 * 1000; 
 
     // ============================================================
-    // 📡 FETCH REAL DATA (PAKAI JALUR BELAKANG JSON)
+    // 📡 FETCH REAL DATA
     // ============================================================
     if (now - market.lastUpdate > CACHE_TIME) {
         try {
             // console.log("🔄 Fetching via Yahoo Query API...");
             
-            // Header Minimalis (Biar dikira aplikasi HP, bukan bot)
+            // Header
             const headers = {
                 'User-Agent': 'Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)'
             };
@@ -94,7 +94,7 @@ module.exports = async (command, args, msg, user, db) => {
         let statusPasar = isMarketOpen ? '🟢 BUKA' : '🔴 TUTUP';
 
         let txt = `📈 *BURSA EFEK INDONESIA (IDX)*\n`;
-        txt += `Status: ${statusPasar} _(Real-Time JSON)_\n`;
+        txt += `Status: ${statusPasar} _(High Risk High Reward)_\n`;
         txt += `------------------\n`;
 
         let naik = 0; let turun = 0;
@@ -175,7 +175,7 @@ module.exports = async (command, args, msg, user, db) => {
         const price = market.prices[ticker].price;
         const gross = price * qty;
 
-        let taxRate = user.balance > 100_000_000_000_000 ? 0.30 : 0.05; 
+        let taxRate = user.balance > 100_000_000_000_000 ? 0.05 : 0.001; 
         const tax = Math.floor(gross * taxRate);
         const net = gross - tax;
 
