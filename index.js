@@ -451,7 +451,7 @@ async function startBot() {
             await devCmd(command, args, msg, user, db, sock).catch(e => console.error("Error Dev:", e.message));
             await economyCmd(command, args, msg, user, db).catch(e => console.error("Error Economy:", e.message));
             await chartCmd(command, args, msg, user, db, sock).catch(e => console.error("Error Chart:", e.message));
-            await stocksCmd(command, args, msg, user, db).catch(e => console.error("Error Stocks:", e.message));
+            await stocksCmd(command, args, msg, user, db, sock).catch(e => console.error("Error Stocks:", e.message));
             await cryptoCmd(command, args, msg, user, db).catch(e => console.error("Error Crypto:", e.message));
             await propertyCmd(command, args, msg, user, db).catch(e => console.error("Error Property:", e.message));
             await minesCmd(command, args, msg, user, db).catch(e => console.error("Error Mines:", e.message));
@@ -687,6 +687,7 @@ async function startBot() {
 }
 
 startBot();
+
 
 
 
