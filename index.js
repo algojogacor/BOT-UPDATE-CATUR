@@ -383,9 +383,6 @@ async function startBot() {
 
             // PARSE COMMAND
             const isCommand = body.startsWith('!');
-            
-            // PARSE COMMAND
-            const isCommand = body.startsWith('!');
             const args = isCommand ? body.slice(1).trim().split(/ +/) : [];
             const command = isCommand ? args.shift().toLowerCase() : "";
             
@@ -804,6 +801,7 @@ async function startBot() {
 }
 
 startBot();
+
 
 
 
