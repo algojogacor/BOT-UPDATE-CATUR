@@ -74,7 +74,7 @@ module.exports = async (command, args, msg, user, db) => {
   // ============================================================
     // 📘 PANDUAN / TUTORIAL (!farmer)
     // ============================================================
-    if (command === 'farming') {
+    if (command === 'farmer') {
         let txt = `🌾 *PANDUAN FARMING & INDUSTRI* 🏭\n`;
         txt += `_Simulasi ekonomi sektor riil: Tanam, Olah, Cuan!_\n\n`;
 
