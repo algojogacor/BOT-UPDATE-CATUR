@@ -4,62 +4,89 @@ const { saveDB } = require('../helpers/database');
 const fmt = (num) => Math.floor(Number(num)).toLocaleString('id-ID');
 
 // ==========================================
-// 1. DATA TANAMAN (RAW MATERIAL)
+// 1. DATA TANAMAN (RE-BALANCED ORDER)
 // ==========================================
+// Urutan: Padi -> Jagung -> Bawang -> Kopi -> Sawit
 const CROPS = {
     'padi': { 
-        modal: 2000000, duration: 20 * 60 * 1000, 
+        modal: 2000000,           // 2 Juta
+        duration: 20 * 60 * 1000, // 20 Menit
         minSell: 2200000, maxSell: 2500000 
     }, 
     'jagung': { 
-        modal: 5000000, duration: 60 * 60 * 1000, 
+        modal: 5000000,           // 5 Juta
+        duration: 60 * 60 * 1000, // 1 Jam
         minSell: 6000000, maxSell: 7000000 
     },
-    'sawit': { 
-        modal: 8000000, duration: 3 * 60 * 60 * 1000, 
-        minSell: 10000000, maxSell: 12000000 
+    'bawang': { 
+        modal: 10000000,          // 10 Juta (Mid Tier)
+        duration: 2 * 60 * 60 * 1000, // 2 Jam
+        minSell: 13000000, maxSell: 15000000 
     },
     'kopi': { 
-        modal: 12000000, duration: 6 * 60 * 60 * 1000, 
-        minSell: 15000000, maxSell: 18000000 
+        modal: 25000000,          // 25 Juta (High Tier)
+        duration: 4 * 60 * 60 * 1000, // 4 Jam
+        minSell: 32000000, maxSell: 38000000 
+    },
+    'sawit': { 
+        modal: 50000000,          // 50 Juta (Endgame/Termahal)
+        duration: 8 * 60 * 60 * 1000, // 8 Jam (Bisa ditinggal kerja/tidur)
+        minSell: 75000000, maxSell: 90000000 
     }
 };
 
 // ==========================================
-// 2. DATA MESIN & RESEP (HAY DAY SYSTEM)
+// 2. DATA MESIN & RESEP (DISESUAIKAN)
 // ==========================================
 const MACHINES = {
+    // TIER 1: Padi -> Beras
     'gilingan': {
         name: "🌾 Rice Mill",
-        price: 50000000, // Modal Beli Mesin 50 Juta
-        input: 'padi',   // Butuh Padi
-        output: 'beras', // Jadi Beras Premium
-        duration: 30 * 60 * 1000, // 30 Menit proses
-        sellPrice: 4000000 // Jual 4jt (Lebih mahal drpd jual padi mentah)
+        price: 50000000, 
+        input: 'padi',   
+        output: 'beras', 
+        duration: 30 * 60 * 1000, 
+        sellPrice: 4500000 
     },
+
+    // TIER 2: Jagung -> Popcorn
     'popcorn_maker': {
         name: "🍿 Popcorn Maker",
-        price: 80000000,
+        price: 80000000, 
         input: 'jagung',
         output: 'popcorn',
-        duration: 45 * 60 * 1000,
-        sellPrice: 10000000
+        duration: 45 * 60 * 1000, 
+        sellPrice: 12000000 
     },
-    'penyulingan': {
-        name: "🛢️ CPO Refinery",
-        price: 150000000, // Mesin Mahal
-        input: 'sawit',
-        output: 'minyak',
-        duration: 2 * 60 * 60 * 1000,
-        sellPrice: 20000000 // Untung Besar
+
+    // TIER 3: Bawang -> Bawang Goreng (NEW)
+    'penggorengan': {
+        name: "🥘 Fried Onion Machine",
+        price: 150000000, // Modal 150 Juta
+        input: 'bawang',
+        output: 'bawang_goreng',
+        duration: 90 * 60 * 1000, // 1.5 Jam
+        sellPrice: 25000000 // Jual 25 Juta
     },
+
+    // TIER 4: Kopi -> Kopi Bubuk
     'roaster': {
         name: "☕ Coffee Roaster",
-        price: 250000000, // Mesin Sultan
+        price: 300000000, // Modal 300 Juta
         input: 'kopi',
         output: 'kopi_bubuk',
-        duration: 3 * 60 * 60 * 1000,
-        sellPrice: 30000000 // Jackpot
+        duration: 3 * 60 * 60 * 1000, // 3 Jam
+        sellPrice: 65000000 // Jual 65 Juta
+    },
+
+    // TIER 5: Sawit -> Minyak Goreng (ULTIMATE)
+    'penyulingan': {
+        name: "🛢️ CPO Refinery",
+        price: 1000000000, // Modal 1 Miliar (Mesin Sultan)
+        input: 'sawit',
+        output: 'minyak',
+        duration: 6 * 60 * 60 * 1000, // 6 Jam
+        sellPrice: 200000000 // Jual 200 Juta (Jackpot!)
     }
 };
 
@@ -71,7 +98,7 @@ module.exports = async (command, args, msg, user, db) => {
     if (!user.farm) user.farm = { plants: [], inventory: {}, machines: [], processing: [] };
     if (!db.market.commodities) db.market.commodities = {};
 
-  // ============================================================
+    // ============================================================
     // 📘 PANDUAN / TUTORIAL (!farmer)
     // ============================================================
     if (command === 'farming' || command === 'farmer' || command === 'tani') {
@@ -79,7 +106,7 @@ module.exports = async (command, args, msg, user, db) => {
         txt += `_Simulasi ekonomi sektor riil: Tanam, Olah, Cuan!_\n\n`;
 
         txt += `👨‍🌾 *TAHAP 1: BERTANI (Modal Kecil)*\n`;
-        txt += `1. \`!tanam <nama>\` : Menanam bibit (Padi/Jagung/dll).\n`;
+        txt += `1. \`!tanam <nama>\` : Menanam bibit (Padi/Jagung/Bawang/Kopi/Sawit).\n`;
         txt += `2. \`!ladang\` : Cek umur tanaman & isi gudang.\n`;
         txt += `3. \`!panen\` : Mengambil hasil tanaman yang matang.\n`;
         txt += `4. \`!pasar\` : Cek harga jual bahan mentah.\n\n`;
@@ -94,8 +121,8 @@ module.exports = async (command, args, msg, user, db) => {
         txt += `👉 \`!jual <nama_barang>\`\n`;
         txt += `_Contoh: !jual beras (Jual barang jadi lebih mahal!)_\n\n`;
 
-        txt += `💡 *TIPS SUKSES:*\n`;
-        txt += `Jangan jual barang mentah! Tabung uang buat beli mesin, lalu olah hasil panenmu agar harganya naik berkali-kali lipat.`;
+        txt += `💡 *STRATEGI KAYA:*\n`;
+        txt += `Targetkan beli mesin *CPO Refinery* (1 Miliar) untuk mengolah Sawit menjadi Emas Cair!`;
 
         return msg.reply(txt);
     }
