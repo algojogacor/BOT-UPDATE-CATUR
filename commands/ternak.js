@@ -4,67 +4,87 @@ const { saveDB } = require('../helpers/database');
 const fmt = (num) => Math.floor(Number(num)).toLocaleString('id-ID');
 
 // ==========================================
-// 1. KONFIGURASI HEWAN
+// 1. KONFIGURASI HEWAN (RE-BALANCED)
 // ==========================================
+// Konsep: Growth Rate dinaikkan drastis agar tidak butuh ratusan kali makan.
 const ANIMALS = {
     'ayam': { 
         name: "🐔 Ayam Kampung", 
-        price: 75000,       
-        maxWeight: 3.0,     
-        sellPrice: 50000,   // Jual 150rb (Profit ~75rb)
-        growthRate: 0.1,    // Base pertumbuhan
-        hungryTime: 60      // Lapar tiap 1 jam
+        price: 50000,       // Modal Murah
+        maxWeight: 3.0,     // Max 3 KG
+        sellPrice: 60000,   // Jual 180rb
+        growthRate: 0.5,    // Base Growth 0.5kg
+        hungryTime: 60      // Lapar 1 Jam
+        // Hitungan:
+        // Target naik: 2.7kg.
+        // Pakan Dedak (Eff 0.3) -> 0.15kg/makan -> Butuh 18x makan (Rp 36rb).
+        // Modal 50k + Pakan 36k = 86k. Jual 180k. PROFIT = 94k.
     },
     'gurame': { 
         name: "🐟 Ikan Gurame", 
-        price: 200000,      
-        maxWeight: 5.0,     
-        sellPrice: 100000,  // Jual 500rb (Profit ~300rb)
-        growthRate: 0.2,    
-        hungryTime: 90      // Lapar tiap 1.5 jam
+        price: 200000,      // Modal 200rb
+        maxWeight: 5.0,     // Max 5 KG
+        sellPrice: 150000,  // Jual 750rb
+        growthRate: 0.8,    // Base Growth 0.8kg
+        hungryTime: 90      // Lapar 1.5 Jam
+        // Hitungan:
+        // Target naik: 4.5kg.
+        // Pakan Pelet (Eff 0.6) -> 0.48kg/makan -> Butuh ~10x makan (Rp 100rb).
+        // Modal 200k + Pakan 100k = 300k. Jual 750k. PROFIT = 450k.
     },
     'kambing': { 
         name: "🐐 Kambing Etawa", 
-        price: 3000000,     
-        maxWeight: 50,      
-        sellPrice: 120000,  // Jual 6jt (Profit ~3jt)
-        growthRate: 2,      
-        hungryTime: 180     // Lapar tiap 3 jam
+        price: 3000000,     // Modal 3 Juta
+        maxWeight: 60,      // Max 60 KG
+        sellPrice: 100000,  // Jual 6 Juta
+        growthRate: 5,      // Base Growth 5kg
+        hungryTime: 180     // Lapar 3 Jam
     },
     'sapi': { 
         name: "🐄 Sapi Brahma", 
-        price: 15000000,    
-        maxWeight: 600,     
-        sellPrice: 60000,   // Jual 36jt (Profit ~21jt)
-        growthRate: 15,     
-        hungryTime: 360     // Lapar tiap 6 jam
+        price: 15000000,    // Modal 15 Juta
+        maxWeight: 700,     // Max 700 KG
+        sellPrice: 50000,   // Jual 35 Juta
+        growthRate: 50,     // Base Growth 50kg (Cepat Besar)
+        hungryTime: 360     // Lapar 6 Jam
+        // Hitungan:
+        // Target naik: 630kg.
+        // Pakan Premium (Eff 1.2) -> 60kg/makan -> Butuh 11x makan (Rp 440rb).
+        // Modal 15jt + Pakan 440rb. Jual 35jt. PROFIT ~19 Juta.
     },
     'kuda': { 
         name: "🐎 Kuda Pacu", 
-        price: 40000000,    
-        maxWeight: 400,     
-        sellPrice: 200000,  // Jual 80jt (Profit ~40jt)
-        growthRate: 10,     
-        hungryTime: 300     // Lapar tiap 5 jam
+        price: 40000000,    // Modal 40 Juta
+        maxWeight: 500,     // Max 500 KG
+        sellPrice: 200000,  // Jual 100 Juta
+        growthRate: 40,     
+        hungryTime: 300     // Lapar 5 Jam
     },
     'unta': { 
-        name: "🐫 Unta Padang Pasir", 
-        price: 80000000,    
-        maxWeight: 800,     
-        sellPrice: 200000,  // Jual 160jt (Profit ~80jt)
-        growthRate: 20,     
-        hungryTime: 480     // Lapar tiap 8 jam
+        name: "🐫 Unta Arab", 
+        price: 80000000,    // Modal 80 Juta
+        maxWeight: 1000,    // Max 1 Ton
+        sellPrice: 150000,  // Jual 150 Juta
+        growthRate: 80,     
+        hungryTime: 480     // Lapar 8 Jam
     }
 };
 
 // ==========================================
-// 2. ITEM (PAKAN & OBAT)
+// 2. ITEM (PAKAN & OBAT) - HARGA DISESUAIKAN
 // ==========================================
 const ITEMS = {
-    'dedak':   { name: "🌾 Dedak (Low)", price: 5000, effect: 0.2 },   // Efek 20% Growth
-    'pelet':   { name: "💊 Pelet (Mid)", price: 15000, effect: 0.5 },  // Efek 50% Growth
-    'premium': { name: "🥩 Premium (High)", price: 50000, effect: 1.0 }, // Efek 100% Growth
-    'obat':    { name: "💉 Antibiotik", price: 100000, type: 'med' }     // Penyembuh
+    // Dedak: Murah meriah, pertumbuhan lambat (30%)
+    'dedak':   { name: "🌾 Dedak (Low)", price: 2000, effect: 0.3 },   
+    
+    // Pelet: Standar, pertumbuhan lumayan (60%)
+    'pelet':   { name: "💊 Pelet (Mid)", price: 10000, effect: 0.6 },  
+    
+    // Premium: Mahal, pertumbuhan BOOSTER (120%)
+    'premium': { name: "🥩 Premium (High)", price: 40000, effect: 1.2 }, 
+    
+    // Obat: Wajib punya
+    'obat':    { name: "💉 Antibiotik", price: 50000, type: 'med' }     
 };
 
 const DEATH_LIMIT = 24 * 60; // MATI SETELAH 24 JAM (1440 Menit)
@@ -92,9 +112,9 @@ module.exports = async (command, args, msg, user, db) => {
 
         txt += `🍽️ *LANGKAH 2: PERAWATAN (PAKAN)*\n`;
         txt += `Gunakan \`!pakan <no_hewan> <jenis_pakan>\`\n`;
-        txt += `• Dedak (Murah): Pertumbuhan 20%\n`;
-        txt += `• Pelet (Sedang): Pertumbuhan 50%\n`;
-        txt += `• Premium (Mahal): Pertumbuhan 100% (Cepat Panen!)\n\n`;
+        txt += `• Dedak (2rb): Pertumbuhan 30% (Hemat)\n`;
+        txt += `• Pelet (10rb): Pertumbuhan 60% (Standar)\n`;
+        txt += `• Premium (40rb): Pertumbuhan 120% (Ngebut!)\n\n`;
 
         txt += `🚑 *KESEHATAN & KEMATIAN*\n`;
         txt += `• Hewan bisa SAKIT (Gak bisa makan). Sembuhkan dgn \`!obati <no>\`\n`;
@@ -114,7 +134,7 @@ module.exports = async (command, args, msg, user, db) => {
         txt += `_Stok gudangmu dulu sebelum memberi makan!_\n\n`;
 
         for (let [code, item] of Object.entries(ITEMS)) {
-            let desc = item.type === 'med' ? "Menyembuhkan Sakit" : `Efektifitas: ${item.effect * 100}%`;
+            let desc = item.type === 'med' ? "Menyembuhkan Sakit" : `Efektifitas: ${(item.effect * 100).toFixed(0)}% Growth`;
             txt += `📦 *${item.name}* (Kode: ${code})\n`;
             txt += `   💰 Harga: Rp ${fmt(item.price)}\n`;
             txt += `   ℹ️ ${desc}\n\n`;
@@ -178,7 +198,8 @@ module.exports = async (command, args, msg, user, db) => {
             const hargaJual = Math.floor(a.weight * conf.sellPrice);
 
             txt += `${i+1}. *${conf.name}* [${status}]\n`;
-            txt += `   ⚖️ Berat: ${a.weight.toFixed(1)} / ${conf.maxWeight} kg (${progress}%)\n`;
+            // PAKAI toFixed(2) AGAR KENAIKAN KECIL TERLIHAT
+            txt += `   ⚖️ Berat: ${a.weight.toFixed(2)} / ${conf.maxWeight} kg (${progress}%)\n`; 
             txt += `   ⏳ ${deadline}\n`;
             txt += `   💰 Nilai Jual: Rp ${fmt(hargaJual)}\n\n`;
         });
@@ -259,12 +280,12 @@ module.exports = async (command, args, msg, user, db) => {
 
         // Pertumbuhan berdasarkan kualitas pakan
         if (animal.weight < conf.maxWeight) {
-            const growth = conf.growthRate * item.effect; // 20% / 50% / 100% dari potensi max
+            const growth = conf.growthRate * item.effect; // Base Growth x Effect Pakan
             animal.weight += growth;
             if (animal.weight > conf.maxWeight) animal.weight = conf.maxWeight;
             
             saveDB(db);
-            return msg.reply(`🍔 Nyam! Makan ${item.name}.\n⚖️ Berat naik +${growth.toFixed(1)}kg menjadi ${animal.weight.toFixed(1)}kg.`);
+            return msg.reply(`🍔 Nyam! Makan ${item.name}.\n⚖️ Berat naik +${growth.toFixed(2)}kg menjadi ${animal.weight.toFixed(2)}kg.`);
         }
 
         saveDB(db);
@@ -327,6 +348,6 @@ module.exports = async (command, args, msg, user, db) => {
         saveDB(db);
 
         let msgBonus = bonus > 0 ? `\n🌟 *Bonus Kualitas Terbaik: +Rp ${fmt(bonus)}*` : "";
-        return msg.reply(`💰 *TERJUAL*\n${conf.name} (Berat ${animal.weight.toFixed(1)}kg)\n💵 Harga Dasar: Rp ${fmt(total)}${msgBonus}\n🤑 *Total Diterima: Rp ${fmt(finalPrice)}*`);
+        return msg.reply(`💰 *TERJUAL*\n${conf.name} (Berat ${animal.weight.toFixed(2)}kg)\n💵 Harga Dasar: Rp ${fmt(total)}${msgBonus}\n🤑 *Total Diterima: Rp ${fmt(finalPrice)}*`);
     }
 };
