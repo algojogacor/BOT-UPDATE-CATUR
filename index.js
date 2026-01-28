@@ -757,7 +757,7 @@ async function startBot() {
 
 ⛏️ *CRYPTO MINING (BARU!)*
 • !mining : Cek Rig, Hashrate & Income
-• !belivga <tipe> : Rakit PC Mining (ROI ~10 Hari)
+• !belivga <tipe> : Rakit PC Mining
 • !claimmining : Panen Bitcoin ke Dompet
 • !overclock : Paksa mesin 2x Speed (Awas Meledak!)
 
@@ -804,6 +804,7 @@ async function startBot() {
 }
 
 startBot();
+
 
 
 
