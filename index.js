@@ -49,21 +49,6 @@ const ALLOWED_GROUPS = [
     "120363422854499629@g.us"        // Grup English Area
 ];
 
-// LOGIKA PENYIMPANAN
-            // Syarat: Grup Terdaftar, Ada Teks, & Bukan Command
-            if (LOGGING_GROUPS.includes(remoteJid) && body && !body.startsWith('!') && !body.startsWith('.')) {
-                
-                // Buat wadah database jika belum ada
-                if (!db.chatLogs) db.chatLogs = {};
-                if (!db.chatLogs[remoteJid]) db.chatLogs[remoteJid] = [];
-
-                // REKAM PESAN (Tanpa Batas/Penghapusan)
-                db.chatLogs[remoteJid].push({
-                    t: Date.now(), // Waktu
-                    u: pushName,   // Nama Pengirim
-                    m: body        // Isi Pesan
-                });
-            }
 
 // SERVER WEB & API
 const express = require('express');
@@ -368,6 +353,36 @@ async function startBot() {
                 msg.reply(`🎊 *LEVEL UP!* Sekarang kamu Level *${user.level}*`);
             }
             addQuestProgress(user, "chat");
+
+            // ==========================================================
+            //  🕵️ TIME MACHINE LOGGER
+            // ==========================================================
+            
+            // Masukkan ID Grup Khusus Time Machine disini
+            const LOGGING_GROUPS = [
+                 "120363310599817766@g.us",       // Grup Sodara
+                 "6282140693010-1590052322@g.us", // Grup Keluarga Wonoboyo
+                 "120363253471284606@g.us",       // Grup Ambarya
+                 "120363328759898377@g.us",       // Grup Testingbot
+            ];
+
+            // Cek apakah grup ini dipantau, ada teks, dan bukan command
+            if (LOGGING_GROUPS.includes(remoteJid) && body && !body.startsWith('!') && !body.startsWith('.')) {
+                
+                // Init Database Logs
+                if (!db.chatLogs) db.chatLogs = {};
+                if (!db.chatLogs[remoteJid]) db.chatLogs[remoteJid] = [];
+
+                // REKAM PESAN (Unlimited)
+                db.chatLogs[remoteJid].push({
+                    t: Date.now(), 
+                    u: pushName,   
+                    m: body        
+                });
+            }
+
+            // PARSE COMMAND
+            const isCommand = body.startsWith('!');
             
             // PARSE COMMAND
             const isCommand = body.startsWith('!');
@@ -778,4 +793,5 @@ async function startBot() {
 }
 
 startBot();
+
 
