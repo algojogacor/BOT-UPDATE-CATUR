@@ -18,7 +18,9 @@ const STOCK_MAPPING = {
     'BREN': 'BREN.JK'
 };
 
-module.exports = async (command, args, msg, user, db) => {
+// TAMBAHKAN 'sock' DI SINI 👇
+module.exports = async (command, args, msg, user, db, sock) => {
+    
     // Init Database
     if (typeof user.balance === 'undefined') user.balance = 0;
     if (typeof user.portfolio === 'undefined') user.portfolio = {};
@@ -27,7 +29,7 @@ module.exports = async (command, args, msg, user, db) => {
     const market = db.stockMarket;
     const now = Date.now();
     
-    // Update data setiap 1 menit
+    // Update data setiap 1 menit (Real-Time Price)
     const CACHE_TIME = 60 * 1000; 
 
     // ============================================================
@@ -35,21 +37,15 @@ module.exports = async (command, args, msg, user, db) => {
     // ============================================================
     if (now - market.lastUpdate > CACHE_TIME) {
         try {
-            // console.log("🔄 Fetching via Yahoo Query API...");
-            
-            // Header
             const headers = {
                 'User-Agent': 'Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)'
             };
 
             for (const [ticker, symbol] of Object.entries(STOCK_MAPPING)) {
                 try {
-                    // URL RAIT (Hidden API) - Mengembalikan JSON Ringan
+                    // URL RAIT (Hidden API)
                     const url = `https://query1.finance.yahoo.com/v8/finance/chart/${symbol}?interval=1d&range=1d`;
-                    
                     const { data } = await axios.get(url, { headers });
-                    
-                    // Parsing JSON dari Yahoo
                     const result = data.chart.result[0];
                     const meta = result.meta;
                     
@@ -66,7 +62,6 @@ module.exports = async (command, args, msg, user, db) => {
                     } 
                 } catch (err) {
                     console.error(`⚠️ Gagal fetch ${ticker}: ${err.message}`);
-                    // Biarkan pakai harga lama di cache kalau gagal
                 }
             }
 
@@ -78,46 +73,122 @@ module.exports = async (command, args, msg, user, db) => {
         }
     }
 
-    const validCommands = ['saham', 'stock', 'market', 'belisaham', 'buystock', 'jualsaham', 'sellstock', 'porto', 'dividen', 'claim'];
+    // Tambahkan 'chart' ke validCommands
+    const validCommands = ['saham', 'stock', 'market', 'belisaham', 'buystock', 'jualsaham', 'sellstock', 'porto', 'dividen', 'claim', 'chart'];
     if (!validCommands.includes(command)) return;
 
     // ============================================================
-    // COMMANDS
+    // 📊 FITUR CHART / GRAFIK (BARU!)
+    // ============================================================
+    if (command === 'chart') {
+        const ticker = args[0]?.toUpperCase();
+        
+        if (!ticker || !STOCK_MAPPING[ticker]) {
+            return msg.reply(`❌ Masukkan kode saham yang valid.\nContoh: \`!chart bbca\`\nList: ${Object.keys(STOCK_MAPPING).join(', ')}`);
+        }
+
+        await msg.reply("⏳ _Mengambil data grafik 1 bulan..._");
+
+        try {
+            const symbol = STOCK_MAPPING[ticker];
+            // Ambil data historis 1 Bulan (Daily Candles)
+            const url = `https://query1.finance.yahoo.com/v8/finance/chart/${symbol}?interval=1d&range=1mo`;
+            const headers = { 'User-Agent': 'Mozilla/5.0' };
+            
+            const { data } = await axios.get(url, { headers });
+            const result = data.chart.result[0];
+            
+            const timestamps = result.timestamp;
+            const prices = result.indicators.quote[0].close;
+
+            // Siapkan Data untuk QuickChart
+            const labels = [];
+            const dataPoints = [];
+
+            // Sampling data (ambil harga penutupan)
+            timestamps.forEach((ts, i) => {
+                if (prices[i]) {
+                    const date = new Date(ts * 1000);
+                    // Format Tgl: 28/01
+                    const dateStr = `${date.getDate()}/${date.getMonth()+1}`;
+                    labels.push(dateStr);
+                    dataPoints.push(prices[i]);
+                }
+            });
+
+            // Tentukan Warna (Hijau jika harga akhir > harga awal)
+            const startPrice = dataPoints[0];
+            const endPrice = dataPoints[dataPoints.length - 1];
+            const isGreen = endPrice >= startPrice;
+            const color = isGreen ? 'rgb(0, 200, 0)' : 'rgb(255, 50, 50)';
+            const bgColor = isGreen ? 'rgba(0, 200, 0, 0.1)' : 'rgba(255, 50, 50, 0.1)';
+
+            // Config QuickChart
+            const chartConfig = {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: `${ticker} (IDR)`,
+                        data: dataPoints,
+                        borderColor: color,
+                        backgroundColor: bgColor,
+                        borderWidth: 2,
+                        fill: true,
+                        pointRadius: 0
+                    }]
+                },
+                options: {
+                    title: { display: true, text: `Grafik ${ticker} - 30 Hari Terakhir` },
+                    scales: {
+                        yAxes: [{ 
+                            ticks: { 
+                                callback: (val) => val.toLocaleString('id-ID') 
+                            } 
+                        }]
+                    }
+                }
+            };
+
+            const chartUrl = `https://quickchart.io/chart?c=${encodeURIComponent(JSON.stringify(chartConfig))}&w=500&h=300`;
+
+            // Kirim Gambar
+            await sock.sendMessage(msg.from, { 
+                image: { url: chartUrl }, 
+                caption: `📈 *Grafik Saham ${ticker}*\n💵 Harga Sekarang: Rp ${fmt(endPrice)}\n📅 Rentang: 1 Bulan`
+            }, { quoted: msg.key });
+
+        } catch (e) {
+            console.error(e);
+            return msg.reply("❌ Gagal membuat grafik saham.");
+        }
+        return;
+    }
+
+    // ============================================================
+    // COMMANDS LAINNYA (Sama Seperti Sebelumnya)
     // ============================================================
 
     // 1. MARKET UI
     if (command === 'saham' || command === 'stock' || command === 'market') {
-        const date = new Date();
-        const hour = date.getHours() + 7; // WIB Estimasi
-        const day = date.getDay();
-        const isMarketOpen = (day >= 1 && day <= 5) && (hour >= 9 && hour < 16);
+        const isMarketOpen = (new Date().getHours() + 7 >= 9 && new Date().getHours() + 7 < 16);
         let statusPasar = isMarketOpen ? '🟢 BUKA' : '🔴 TUTUP';
 
-        let txt = `📈 *BURSA EFEK INDONESIA (IDX)*\n`;
-        txt += `Status: ${statusPasar} _(High Risk High Reward)_\n`;
-        txt += `------------------\n`;
-
+        let txt = `📈 *BURSA EFEK INDONESIA (IDX)*\nStatus: ${statusPasar}\n------------------\n`;
         let naik = 0; let turun = 0;
 
         for (const ticker of Object.keys(STOCK_MAPPING)) {
             const data = market.prices[ticker];
             if (data) {
                 const isGreen = data.change >= 0;
-                const icon = isGreen ? '🟢' : '🔴';
-                const sign = isGreen ? '+' : '';
-                
-                txt += `${icon} *${ticker}*: Rp ${fmt(data.price)} (${sign}${data.change.toFixed(2)}%) \n`;
-
+                txt += `${isGreen ? '🟢' : '🔴'} *${ticker}*: Rp ${fmt(data.price)} (${isGreen ? '+' : ''}${data.change.toFixed(2)}%) \n`;
                 if(isGreen) naik++; else turun++;
             } else {
                 txt += `⚪ *${ticker}*: _Loading..._\n`;
             }
         }
         
-        txt += `------------------\n`;
-        txt += `📊 ${naik} Naik, ${turun} Turun\n`;
-        txt += `💰 Saldo: Rp ${fmt(user.balance)}\n`;
-        txt += `💡 \`!belisaham <kode> <lembar>\``;
+        txt += `------------------\n📊 ${naik} Naik, ${turun} Turun\n💰 Saldo: Rp ${fmt(user.balance)}\n💡 \`!belisaham <kode> <lembar>\`\n📊 \`!chart <kode>\` (Lihat Grafik)`;
         return msg.reply(txt);
     }
 
@@ -126,8 +197,8 @@ module.exports = async (command, args, msg, user, db) => {
         const ticker = args[0]?.toUpperCase();
         let qtyRaw = args[1];
 
-        if (!STOCK_MAPPING[ticker]) return msg.reply(`❌ Saham tidak terdaftar.\nList: ${Object.keys(STOCK_MAPPING).join(', ')}`);
-        if (!market.prices[ticker] || !market.prices[ticker].price) return msg.reply("⏳ Sedang mengambil data pasar... Coba 5 detik lagi.");
+        if (!STOCK_MAPPING[ticker]) return msg.reply(`❌ Saham tidak terdaftar.`);
+        if (!market.prices[ticker] || !market.prices[ticker].price) return msg.reply("⏳ Data pasar loading...");
         
         const price = market.prices[ticker].price;
         let qty = parseInt(qtyRaw);
@@ -170,7 +241,7 @@ module.exports = async (command, args, msg, user, db) => {
         qty = parseInt(qty);
 
         if (isNaN(qty) || qty < 1 || qty > p.qty) return msg.reply("❌ Jumlah salah.");
-        if (!market.prices[ticker]) return msg.reply("❌ Data pasar belum siap.");
+        if (!market.prices[ticker]) return msg.reply("❌ Data pasar loading...");
 
         const price = market.prices[ticker].price;
         const gross = price * qty;
