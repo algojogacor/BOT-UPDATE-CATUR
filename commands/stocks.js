@@ -1,67 +1,69 @@
-const axios = require('axios'); 
+const yahooFinance = require('yahoo-finance2').default; // Library wajib!
 const { saveDB } = require('../helpers/database');
 
 // HELPER FORMAT ANGKA
 const fmt = (num) => Math.floor(Number(num)).toLocaleString('id-ID');
 
-// DAFTAR SAHAM (TIKER IDX)
-// Kamu bisa tambah emiten lain sesuka hati
-const STOCK_LIST = [
-    'BBCA', 'BBRI', 'BMRI', 'TLKM', 'ASII', 
-    'UNTR', 'GOTO', 'FREN', 'ANTM', 'ADRO'
-];
+// DAFTAR SAHAM (Format Yahoo Finance pakai akhiran .JK untuk Indonesia)
+const STOCK_MAPPING = {
+    'BBCA': 'BBCA.JK',
+    'BBRI': 'BBRI.JK',
+    'BMRI': 'BMRI.JK',
+    'TLKM': 'TLKM.JK',
+    'ASII': 'ASII.JK',
+    'UNTR': 'UNTR.JK',
+    'GOTO': 'GOTO.JK',
+    'ANTM': 'ANTM.JK',
+    'ADRO': 'ADRO.JK',
+    'BREN': 'BREN.JK' // Tambahan saham hot
+};
 
 module.exports = async (command, args, msg, user, db) => {
-    // Init User Database
+    // Init Database User
     if (typeof user.balance === 'undefined') user.balance = 0;
     if (typeof user.portfolio === 'undefined') user.portfolio = {};
-
-    // Init Market Database
+    
+    // Init Database Market (Cache biar ga spamming Yahoo)
     if (!db.stockMarket) db.stockMarket = { prices: {}, lastUpdate: 0 };
     
     const market = db.stockMarket;
     const now = Date.now();
     
-    // Update tiap 1 menit
+    // Update data setiap 1 menit (Real-Time)
     const CACHE_TIME = 60 * 1000; 
 
     // ============================================================
-    // 📡 FETCH REAL DATA (IDX INDONESIA)
+    // 📡 FETCH REAL DATA (YAHOO FINANCE)
     // ============================================================
     if (now - market.lastUpdate > CACHE_TIME) {
         try {
-            // Kita ambil data per ticker
-            for (const ticker of STOCK_LIST) {
-        
-                const url = `https://api.goapi.id/v1/stock/idx/${ticker}`;
-                
+            // console.log("🔄 Fetching data Yahoo Finance...");
             
-                await new Promise(r => setTimeout(r, 500)); 
-
-                const response = await axios.get(url, {
-                    headers: { 'accept': 'application/json' }
-                
-                    // 'X-API-KEY': 'YOUR_API_KEY
-                });
-
-                const data = response.data.data;
-                
-                if (data) {
-                    market.prices[ticker] = {
-                        price: data.last_price || data.close_price, // Harga Terakhir
-                        change: data.change_percent || 0, // Persentase Perubahan
-                        name: data.company_name
-                    };
+            // Kita ambil data satu per satu (Yahoo Finance jarang limit)
+            for (const [ticker, symbol] of Object.entries(STOCK_MAPPING)) {
+                try {
+                    const quote = await yahooFinance.quote(symbol);
+                    
+                    if (quote) {
+                        market.prices[ticker] = {
+                            price: quote.regularMarketPrice, // Harga Real-time
+                            change: quote.regularMarketChangePercent || 0, // % Perubahan
+                            prevClose: quote.regularMarketPreviousClose,
+                            name: ticker
+                        };
+                    }
+                } catch (err) {
+                    console.error(`⚠️ Gagal fetch ${ticker}: ${err.message}`);
+                    // Kalau gagal, biarkan pakai harga lama di database (jangan crash)
                 }
             }
 
             market.lastUpdate = now;
             saveDB(db);
-            // console.log("✅ Stock Market Data Updated");
+            // console.log("✅ Market Updated!");
 
         } catch (error) {
-            console.error("❌ Gagal update saham (Mungkin Market Tutup/Limit):", error.message);
-            // Bot akan pakai harga terakhir di database
+            console.error("❌ Yahoo Finance Error:", error.message);
         }
     }
 
@@ -74,31 +76,32 @@ module.exports = async (command, args, msg, user, db) => {
 
     // 1. MARKET UI (REAL TIME)
     if (command === 'saham' || command === 'stock' || command === 'market') {
-        // Cek Jam Bursa (Senin-Jumat, 09:00 - 16:00 WIB)
         const date = new Date();
-        const hour = date.getHours() + 7; // WIB
+        const hour = date.getHours(); 
         const day = date.getDay();
-        const isMarketOpen = (day >= 1 && day <= 5) && (hour >= 9 && hour < 16);
+        // Bursa buka jam 09:00 - 16:00 WIB (Senin-Jumat)
+        // Server biasanya UTC, sesuaikan jam server kamu (+7 untuk WIB)
+        // Anggap saja status berdasarkan data Yahoo (kalau ada pergerakan = buka)
         
-        let statusPasar = isMarketOpen ? '🟢 BUKA' : '🔴 TUTUP';
-
         let txt = `📈 *BURSA EFEK INDONESIA (IDX)*\n`;
-        txt += `Status: ${statusPasar} (Real-Time Data)\n`;
+        txt += `Sumber: _Yahoo Finance (Real Data)_\n`;
         txt += `------------------\n`;
 
         let naik = 0; let turun = 0;
 
-        for (const ticker of STOCK_LIST) {
+        for (const ticker of Object.keys(STOCK_MAPPING)) {
             const data = market.prices[ticker];
             if (data) {
                 const isGreen = data.change >= 0;
                 const icon = isGreen ? '🟢' : '🔴';
                 const sign = isGreen ? '+' : '';
                 
-                // Format: 🟢 BBCA: Rp 10.200 (+1.5%)
-                txt += `${icon} *${ticker}*: Rp ${fmt(data.price)} (${sign}${data.change}%) \n`;
+                // Format: 🟢 BBCA: Rp 10.200 (+1.25%)
+                txt += `${icon} *${ticker}*: Rp ${fmt(data.price)} (${sign}${data.change.toFixed(2)}%) \n`;
 
                 if(isGreen) naik++; else turun++;
+            } else {
+                txt += `⚪ *${ticker}*: _Loading data..._\n`;
             }
         }
         
@@ -114,15 +117,19 @@ module.exports = async (command, args, msg, user, db) => {
         const ticker = args[0]?.toUpperCase();
         let qtyRaw = args[1];
 
-        if (!STOCK_LIST.includes(ticker)) return msg.reply(`❌ Saham tidak terdaftar. List: ${STOCK_LIST.join(', ')}`);
-        if (!market.prices[ticker]) return msg.reply("❌ Data harga sedang loading... coba lagi.");
+        if (!STOCK_MAPPING[ticker]) return msg.reply(`❌ Saham tidak terdaftar.\nList: ${Object.keys(STOCK_MAPPING).join(', ')}`);
+        
+        // Pastikan harga sudah ada
+        if (!market.prices[ticker] || !market.prices[ticker].price) {
+            // Coba paksa update sekali kalau data kosong
+            return msg.reply("⏳ Data pasar sedang diambil... Coba ketik `!saham` dulu lalu ulangi.");
+        }
         
         const price = market.prices[ticker].price;
         let qty = parseInt(qtyRaw);
 
-        // Fitur beli Max
+        // Beli Max
         if (qtyRaw === 'max' || qtyRaw === 'all') {
-            // Fee Broker 0.3%
             const maxBuy = Math.floor(user.balance / (price * 1.003)); 
             qty = maxBuy;
         }
@@ -130,7 +137,7 @@ module.exports = async (command, args, msg, user, db) => {
         if (isNaN(qty) || qty < 1) return msg.reply("❌ Jumlah lembar salah (Min 1 lembar).");
 
         const rawCost = price * qty;
-        const fee = Math.floor(rawCost * 0.003); // Fee Broker 0.3%
+        const fee = Math.floor(rawCost * 0.003); // Fee 0.3%
         const total = rawCost + fee;
 
         if (user.balance < total) return msg.reply(`❌ Uang kurang! Butuh Rp ${fmt(total)}`);
@@ -140,8 +147,7 @@ module.exports = async (command, args, msg, user, db) => {
         if (!user.portfolio[ticker]) user.portfolio[ticker] = { qty: 0, avg: 0 };
         const p = user.portfolio[ticker];
         
-        // Rumus Average Down
-        // (Total Nilai Lama + Total Beli Baru) / Total Lembar Baru
+        // Average Down Logic
         const oldVal = p.qty * p.avg;
         p.avg = Math.floor((oldVal + rawCost) / (p.qty + qty));
         p.qty += qty;
@@ -150,7 +156,7 @@ module.exports = async (command, args, msg, user, db) => {
         return msg.reply(`✅ *ORDER MATCHED*\nEmiten: ${ticker}\nVol: ${fmt(qty)} Lembar\nHarga: Rp ${fmt(price)}\nFee: Rp ${fmt(fee)}\n📉 Total Bayar: Rp ${fmt(total)}`);
     }
 
-    // 3. JUAL SAHAM (REAL PRICE + PAJAK)
+    // 3. JUAL SAHAM (REAL PRICE)
     if (command === 'jualsaham' || command === 'sellstock') {
         const ticker = args[0]?.toUpperCase();
         let qty = args[1];
@@ -163,17 +169,19 @@ module.exports = async (command, args, msg, user, db) => {
 
         if (isNaN(qty) || qty < 1 || qty > p.qty) return msg.reply("❌ Jumlah salah/kurang.");
 
+        // Pastikan harga ada
+        if (!market.prices[ticker]) return msg.reply("❌ Gagal ambil harga pasar. Coba lagi nanti.");
+
         const price = market.prices[ticker].price;
         const gross = price * qty;
 
-        // PAJAK PROGRESIF
-        let taxRate = 0.05; // 5% Standard
-        if (user.balance > 100_000_000_000_000) taxRate = 0.30; // 30% 
+        // Pajak Orang Kaya (Progresif)
+        let taxRate = 0.05; 
+        if (user.balance > 100_000_000_000_000) taxRate = 0.30; 
 
         const tax = Math.floor(gross * taxRate);
         const net = gross - tax;
 
-        // Hitung Profit/Loss
         const modal = p.avg * qty;
         const profit = net - modal;
         const pct = ((profit / modal) * 100).toFixed(2);
@@ -187,25 +195,22 @@ module.exports = async (command, args, msg, user, db) => {
         return msg.reply(`✅ *SELL ORDER DONE*\nEmiten: ${ticker}\nVol: ${fmt(qty)} Lembar\nHarga: Rp ${fmt(price)}\n\n💰 Gross: Rp ${fmt(gross)}\n💸 Tax (${taxRate*100}%): Rp ${fmt(tax)}\n💵 *Net: Rp ${fmt(net)}*\n\n📊 P/L: ${status} Rp ${fmt(profit)} (${pct}%)`);
     }
 
-    // 4. PORTO (VALUASI REAL-TIME)
+    // 4. PORTO (REAL VALUATION)
     if (command === 'porto' || command === 'pf') {
         let txt = `💼 *PORTOFOLIO SAHAM*\n`;
         let totalVal = 0;
         let totalGain = 0;
         let hasStock = false;
-
-        // Estimasi Pajak di Display
-        let rate = 0.05;
-        if (user.balance > 100_000_000_000_000) rate = 0.30;
+        let rate = user.balance > 100_000_000_000_000 ? 0.30 : 0.05;
 
         for (let [ticker, data] of Object.entries(user.portfolio)) {
             if (data.qty > 0) {
-                // Cek harga terkini, kalau error pakai harga beli (avg)
+                // Gunakan harga market terbaru, atau fallback ke harga beli jika market error
                 const currentData = market.prices[ticker];
                 const price = currentData ? currentData.price : data.avg;
                 
                 const gross = price * data.qty;
-                const net = gross - (gross * rate); // Nilai bersih setelah pajak
+                const net = gross - (gross * rate); 
                 const gain = net - (data.avg * data.qty);
                 const pct = ((gain / (data.avg * data.qty)) * 100).toFixed(1);
                 
