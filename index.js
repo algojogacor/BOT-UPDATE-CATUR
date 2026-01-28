@@ -12,6 +12,7 @@ const economyCmd = require('./commands/economy');
 const chartCmd = require('./commands/chart');
 const propertyCmd = require('./commands/property'); 
 const stocksCmd = require('./commands/stocks');
+const farmingCmd = require('./commands/farming');
 const devCmd = require('./commands/developer');
 const cryptoCmd = require('./commands/crypto'); 
 const bolaCmd = require('./commands/bola');         
@@ -458,6 +459,7 @@ async function startBot() {
             await bolaCmd(command, args, msg, user, db, sender).catch(e => console.error("Error Bola:", e.message));
             await nationCmd(command, args, msg, user, db).catch(e => console.error("Error Nation:", e.message));
             await robCmd(command, args, msg, user, db).catch(e => console.error("Error Rob:", e.message));
+            await farmingCmd(command, args, msg, user, db);
             await rouletteCmd(command, args, msg, user, db).catch(e => console.error("Error Roulette:", e.message));
             await battleCmd(command, args, msg, user, db).catch(e => console.error("Error Battle:", e.message));
             await ttsCmd(command, args, msg).catch(e => console.error("Error TTS:", e.message));
@@ -679,6 +681,7 @@ async function startBot() {
 }
 
 startBot();
+
 
 
 
