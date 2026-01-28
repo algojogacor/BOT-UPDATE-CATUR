@@ -755,6 +755,12 @@ async function startBot() {
 • !ask <tanya> (Auto-Pilot)
 • !sharechat (Buat Link History) 
 
+⛏️ *CRYPTO MINING (BARU!)*
+• !mining : Cek Rig, Hashrate & Income
+• !belivga <tipe> : Rakit PC Mining (ROI ~10 Hari)
+• !claimmining : Panen Bitcoin ke Dompet
+• !overclock : Paksa mesin 2x Speed (Awas Meledak!)
+
 🏳️ *NEGARA (WAR)*
 • !negara : Cek status & infrastruktur
 • !buatnegara <nama> : Bikin Negara (Biaya 5 Miliar)
@@ -775,6 +781,11 @@ async function startBot() {
 • !img (Image generator)
 • !hide <pesan> (Reply/Kirim Gambar) | !reveal: Munculkan pesan
 
+🕰️ *TIME MACHINE*
+• !timemachine : Lihat chat grup di masa lalu
+• !flashback : Kenangan chat jam segini (Harian)
+
+
 🛠️ *TOOLS & ADMIN*
 • !id (Cek ID Lengkap)
 • !idgrup (Cek ID Grup)`;
@@ -793,5 +804,6 @@ async function startBot() {
 }
 
 startBot();
+
 
 
