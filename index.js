@@ -620,6 +620,13 @@ async function startBot() {
 • !beliusaha <id> <jml> : Beli bisnis baru
 • !collect      : Panen uang dari bisnis
 
+🌾 *FARMING & INDUSTRI (HAYDAY)*
+• !farming (Panduan Lengkap)
+• !tanam <tanaman> | !panen
+• !ladang | !pasar | !jual <barang>
+• !toko (Beli Mesin) | !pabrik
+• !olah <mesin> (Produksi Barang Jadi)
+
 🎮 *GAMES*
 • !gacha (Jackpot 10k!)
 • !casino <jml> | !slot <jml> | !tembok (Tebak Hal di Belakang Tembok)
@@ -630,7 +637,6 @@ async function startBot() {
 • !catur <bet>
 • !rpg (Turn-based Game) | !claim <kode>
 • !slither | !claimslither <kode>
-
 
 ⚽ *SPORT BETTING*
 • !updatebola | !bola | !topbola | !resultbola
@@ -681,6 +687,7 @@ async function startBot() {
 }
 
 startBot();
+
 
 
 
