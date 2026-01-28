@@ -13,6 +13,7 @@ const chartCmd = require('./commands/chart');
 const propertyCmd = require('./commands/property'); 
 const stocksCmd = require('./commands/stocks');
 const farmingCmd = require('./commands/farming');
+const ternakCmd = require('./commands/ternak');
 const devCmd = require('./commands/developer');
 const cryptoCmd = require('./commands/crypto'); 
 const bolaCmd = require('./commands/bola');         
@@ -460,6 +461,7 @@ async function startBot() {
             await nationCmd(command, args, msg, user, db).catch(e => console.error("Error Nation:", e.message));
             await robCmd(command, args, msg, user, db).catch(e => console.error("Error Rob:", e.message));
             await farmingCmd(command, args, msg, user, db);
+            await ternakCmd(command, args, msg, user, db);
             await rouletteCmd(command, args, msg, user, db).catch(e => console.error("Error Roulette:", e.message));
             await battleCmd(command, args, msg, user, db).catch(e => console.error("Error Battle:", e.message));
             await ttsCmd(command, args, msg).catch(e => console.error("Error TTS:", e.message));
@@ -627,6 +629,15 @@ async function startBot() {
 • !toko (Beli Mesin) | !pabrik
 • !olah <mesin> (Produksi Barang Jadi)
 
+🐔 *PETERNAKAN (LIVESTOCK)*
+• !ternak (📖 PANDUAN LENGKAP)
+• !kandang (Cek Hewan & Status)
+• !tokopakan (Beli Pakan & Obat)
+• !belihewan <jenis> (Ayam/Sapi/dll)
+• !pakan <no> <jenis> (Beri Makan)
+• !obati <no> (Sembuhkan Sakit)
+• !jualhewan <no> (Panen)
+
 🎮 *GAMES*
 • !gacha (Jackpot 10k!)
 • !casino <jml> | !slot <jml> | !tembok (Tebak Hal di Belakang Tembok)
@@ -687,6 +698,7 @@ async function startBot() {
 }
 
 startBot();
+
 
 
 
