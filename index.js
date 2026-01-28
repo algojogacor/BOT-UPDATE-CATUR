@@ -8,6 +8,7 @@ const { exec } = require('child_process');
 const { connectToCloud, loadDB, saveDB, addQuestProgress } = require('./helpers/database');
 
 // --- IMPORT COMMANDS ---
+const timeMachineCmd = require('./commands/timemachine');
 const economyCmd = require('./commands/economy');     
 const jobsCmd = require('./commands/jobs');
 const chartCmd = require('./commands/chart');
@@ -47,6 +48,22 @@ const ALLOWED_GROUPS = [
     "120363328759898377@g.us",       // Grup Testingbot
     "120363422854499629@g.us"        // Grup English Area
 ];
+
+// LOGIKA PENYIMPANAN
+            // Syarat: Grup Terdaftar, Ada Teks, & Bukan Command
+            if (LOGGING_GROUPS.includes(remoteJid) && body && !body.startsWith('!') && !body.startsWith('.')) {
+                
+                // Buat wadah database jika belum ada
+                if (!db.chatLogs) db.chatLogs = {};
+                if (!db.chatLogs[remoteJid]) db.chatLogs[remoteJid] = [];
+
+                // REKAM PESAN (Tanpa Batas/Penghapusan)
+                db.chatLogs[remoteJid].push({
+                    t: Date.now(), // Waktu
+                    u: pushName,   // Nama Pengirim
+                    m: body        // Isi Pesan
+                });
+            }
 
 // SERVER WEB & API
 const express = require('express');
@@ -492,6 +509,7 @@ async function startBot() {
             
            
             await toolsCmd(command, args, msg, user, db, sock).catch(e => console.error("Error Tools:", e.message));
+            await timeMachineCmd(command, args, msg, user, db, sock);
             await devCmd(command, args, msg, user, db, sock).catch(e => console.error("Error Dev:", e.message));
             await economyCmd(command, args, msg, user, db).catch(e => console.error("Error Economy:", e.message));
             await chartCmd(command, args, msg, user, db, sock).catch(e => console.error("Error Chart:", e.message));
@@ -760,3 +778,4 @@ async function startBot() {
 }
 
 startBot();
+
