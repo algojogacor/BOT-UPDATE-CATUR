@@ -64,7 +64,7 @@ const MACHINES = {
 };
 
 module.exports = async (command, args, msg, user, db) => {
-    const validCommands = ['tanam', 'ladang', 'panen', 'pasar', 'jual', 'toko', 'beli', 'olah', 'pabrik', 'produksi'];
+    const validCommands = ['tanam', 'ladang', 'panen', 'pasar', 'jual', 'toko', 'beli', 'olah', 'pabrik', 'produksi', 'farming', 'farmer', 'tani'];
     if (!validCommands.includes(command)) return;
 
     // INIT DATABASE
@@ -74,7 +74,7 @@ module.exports = async (command, args, msg, user, db) => {
   // ============================================================
     // 📘 PANDUAN / TUTORIAL (!farmer)
     // ============================================================
-    if (command === 'farmer') {
+    if (command === 'farming' || command === 'farmer' || command === 'tani') {
         let txt = `🌾 *PANDUAN FARMING & INDUSTRI* 🏭\n`;
         txt += `_Simulasi ekonomi sektor riil: Tanam, Olah, Cuan!_\n\n`;
 
