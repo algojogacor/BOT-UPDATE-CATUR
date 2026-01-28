@@ -9,6 +9,7 @@ const { connectToCloud, loadDB, saveDB, addQuestProgress } = require('./helpers/
 
 // --- IMPORT COMMANDS ---
 const economyCmd = require('./commands/economy');     
+const jobsCmd = require('./commands/jobs');
 const chartCmd = require('./commands/chart');
 const propertyCmd = require('./commands/property'); 
 const stocksCmd = require('./commands/stocks');
@@ -460,8 +461,9 @@ async function startBot() {
             await bolaCmd(command, args, msg, user, db, sender).catch(e => console.error("Error Bola:", e.message));
             await nationCmd(command, args, msg, user, db).catch(e => console.error("Error Nation:", e.message));
             await robCmd(command, args, msg, user, db).catch(e => console.error("Error Rob:", e.message));
-            await farmingCmd(command, args, msg, user, db);
+            await farmingCmd(command, args, msg, user, db);.catch(e => console.error("Error Farming:", e.message));
             await ternakCmd(command, args, msg, user, db);
+            await jobsCmd(command, args, msg, user, db);
             await rouletteCmd(command, args, msg, user, db).catch(e => console.error("Error Roulette:", e.message));
             await battleCmd(command, args, msg, user, db).catch(e => console.error("Error Battle:", e.message));
             await ttsCmd(command, args, msg).catch(e => console.error("Error TTS:", e.message));
@@ -638,6 +640,13 @@ async function startBot() {
 • !obati <no> (Sembuhkan Sakit)
 • !jualhewan <no> (Panen)
 
+💼 *PEKERJAAN (JOBS)*
+• !jobs (List Lowongan)
+• !lamar <nama> (Join Job)
+• !kerja (Ambil Gaji)
+• !skill (Kekuatan Khusus)
+• !resign (Keluar)
+
 🎮 *GAMES*
 • !gacha (Jackpot 10k!)
 • !casino <jml> | !slot <jml> | !tembok (Tebak Hal di Belakang Tembok)
@@ -698,6 +707,7 @@ async function startBot() {
 }
 
 startBot();
+
 
 
 
