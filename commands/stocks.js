@@ -4,7 +4,7 @@ const { saveDB } = require('../helpers/database');
 // HELPER FORMAT ANGKA
 const fmt = (num) => Math.floor(Number(num)).toLocaleString('id-ID');
 
-// DAFTAR SAHAM
+// DAFTAR SAHAM (Tetap pakai format .JK)
 const STOCK_MAPPING = {
     'BBCA': 'BBCA.JK',
     'BBRI': 'BBRI.JK',
@@ -18,9 +18,7 @@ const STOCK_MAPPING = {
     'BREN': 'BREN.JK'
 };
 
-// TAMBAHKAN 'sock' DI SINI 👇
 module.exports = async (command, args, msg, user, db, sock) => {
-    
     // Init Database
     if (typeof user.balance === 'undefined') user.balance = 0;
     if (typeof user.portfolio === 'undefined') user.portfolio = {};
@@ -29,11 +27,11 @@ module.exports = async (command, args, msg, user, db, sock) => {
     const market = db.stockMarket;
     const now = Date.now();
     
-    // Update data setiap 1 menit (Real-Time Price)
+    // Update data setiap 1 menit
     const CACHE_TIME = 60 * 1000; 
 
     // ============================================================
-    // 📡 FETCH REAL DATA
+    // 📡 FETCH REAL DATA (PAKAI JALUR BELAKANG JSON)
     // ============================================================
     if (now - market.lastUpdate > CACHE_TIME) {
         try {
@@ -43,7 +41,7 @@ module.exports = async (command, args, msg, user, db, sock) => {
 
             for (const [ticker, symbol] of Object.entries(STOCK_MAPPING)) {
                 try {
-                    // URL RAIT (Hidden API)
+                    // URL RAIT (Hidden API) - Mengembalikan JSON Ringan
                     const url = `https://query1.finance.yahoo.com/v8/finance/chart/${symbol}?interval=1d&range=1d`;
                     const { data } = await axios.get(url, { headers });
                     const result = data.chart.result[0];
@@ -73,12 +71,11 @@ module.exports = async (command, args, msg, user, db, sock) => {
         }
     }
 
-    // Tambahkan 'chart' ke validCommands
     const validCommands = ['saham', 'stock', 'market', 'belisaham', 'buystock', 'jualsaham', 'sellstock', 'porto', 'dividen', 'claim', 'chart'];
     if (!validCommands.includes(command)) return;
 
     // ============================================================
-    // 📊 FITUR CHART / GRAFIK (BARU!)
+    // 📊 FITUR CHART / GRAFIK (FIXED ERROR 'fromMe')
     // ============================================================
     if (command === 'chart') {
         const ticker = args[0]?.toUpperCase();
@@ -91,7 +88,6 @@ module.exports = async (command, args, msg, user, db, sock) => {
 
         try {
             const symbol = STOCK_MAPPING[ticker];
-            // Ambil data historis 1 Bulan (Daily Candles)
             const url = `https://query1.finance.yahoo.com/v8/finance/chart/${symbol}?interval=1d&range=1mo`;
             const headers = { 'User-Agent': 'Mozilla/5.0' };
             
@@ -101,29 +97,24 @@ module.exports = async (command, args, msg, user, db, sock) => {
             const timestamps = result.timestamp;
             const prices = result.indicators.quote[0].close;
 
-            // Siapkan Data untuk QuickChart
             const labels = [];
             const dataPoints = [];
 
-            // Sampling data (ambil harga penutupan)
             timestamps.forEach((ts, i) => {
                 if (prices[i]) {
                     const date = new Date(ts * 1000);
-                    // Format Tgl: 28/01
                     const dateStr = `${date.getDate()}/${date.getMonth()+1}`;
                     labels.push(dateStr);
                     dataPoints.push(prices[i]);
                 }
             });
 
-            // Tentukan Warna (Hijau jika harga akhir > harga awal)
             const startPrice = dataPoints[0];
             const endPrice = dataPoints[dataPoints.length - 1];
             const isGreen = endPrice >= startPrice;
             const color = isGreen ? 'rgb(0, 200, 0)' : 'rgb(255, 50, 50)';
             const bgColor = isGreen ? 'rgba(0, 200, 0, 0.1)' : 'rgba(255, 50, 50, 0.1)';
 
-            // Config QuickChart
             const chartConfig = {
                 type: 'line',
                 data: {
@@ -142,9 +133,7 @@ module.exports = async (command, args, msg, user, db, sock) => {
                     title: { display: true, text: `Grafik ${ticker} - 30 Hari Terakhir` },
                     scales: {
                         yAxes: [{ 
-                            ticks: { 
-                                callback: (val) => val.toLocaleString('id-ID') 
-                            } 
+                            ticks: { callback: (val) => val.toLocaleString('id-ID') } 
                         }]
                     }
                 }
@@ -152,11 +141,16 @@ module.exports = async (command, args, msg, user, db, sock) => {
 
             const chartUrl = `https://quickchart.io/chart?c=${encodeURIComponent(JSON.stringify(chartConfig))}&w=500&h=300`;
 
-            // Kirim Gambar
+            // 🔥 PERBAIKAN DI SINI (Membuat objek quoted lengkap) 🔥
+            const quotedMsg = {
+                key: msg.key,
+                message: msg.message
+            };
+
             await sock.sendMessage(msg.from, { 
                 image: { url: chartUrl }, 
                 caption: `📈 *Grafik Saham ${ticker}*\n💵 Harga Sekarang: Rp ${fmt(endPrice)}\n📅 Rentang: 1 Bulan`
-            }, { quoted: msg.key });
+            }, { quoted: quotedMsg }); // Gunakan quotedMsg yang lengkap
 
         } catch (e) {
             console.error(e);
@@ -166,29 +160,42 @@ module.exports = async (command, args, msg, user, db, sock) => {
     }
 
     // ============================================================
-    // COMMANDS LAINNYA (Sama Seperti Sebelumnya)
+    // COMMANDS LAINNYA
     // ============================================================
 
     // 1. MARKET UI
     if (command === 'saham' || command === 'stock' || command === 'market') {
-        const isMarketOpen = (new Date().getHours() + 7 >= 9 && new Date().getHours() + 7 < 16);
+        const date = new Date();
+        const hour = date.getHours() + 7;
+        const day = date.getDay();
+        const isMarketOpen = (day >= 1 && day <= 5) && (hour >= 9 && hour < 16);
         let statusPasar = isMarketOpen ? '🟢 BUKA' : '🔴 TUTUP';
 
-        let txt = `📈 *BURSA EFEK INDONESIA (IDX)*\nStatus: ${statusPasar}\n------------------\n`;
+        let txt = `📈 *BURSA EFEK INDONESIA (IDX)*\n`;
+        txt += `Status: ${statusPasar} _(Real-Time JSON)_\n`;
+        txt += `------------------\n`;
+
         let naik = 0; let turun = 0;
 
         for (const ticker of Object.keys(STOCK_MAPPING)) {
             const data = market.prices[ticker];
             if (data) {
                 const isGreen = data.change >= 0;
-                txt += `${isGreen ? '🟢' : '🔴'} *${ticker}*: Rp ${fmt(data.price)} (${isGreen ? '+' : ''}${data.change.toFixed(2)}%) \n`;
+                const icon = isGreen ? '🟢' : '🔴';
+                const sign = isGreen ? '+' : '';
+                
+                txt += `${icon} *${ticker}*: Rp ${fmt(data.price)} (${sign}${data.change.toFixed(2)}%) \n`;
+
                 if(isGreen) naik++; else turun++;
             } else {
                 txt += `⚪ *${ticker}*: _Loading..._\n`;
             }
         }
         
-        txt += `------------------\n📊 ${naik} Naik, ${turun} Turun\n💰 Saldo: Rp ${fmt(user.balance)}\n💡 \`!belisaham <kode> <lembar>\`\n📊 \`!chart <kode>\` (Lihat Grafik)`;
+        txt += `------------------\n`;
+        txt += `📊 ${naik} Naik, ${turun} Turun\n`;
+        txt += `💰 Saldo: Rp ${fmt(user.balance)}\n`;
+        txt += `💡 \`!belisaham <kode> <lembar>\``;
         return msg.reply(txt);
     }
 
@@ -197,8 +204,8 @@ module.exports = async (command, args, msg, user, db, sock) => {
         const ticker = args[0]?.toUpperCase();
         let qtyRaw = args[1];
 
-        if (!STOCK_MAPPING[ticker]) return msg.reply(`❌ Saham tidak terdaftar.`);
-        if (!market.prices[ticker] || !market.prices[ticker].price) return msg.reply("⏳ Data pasar loading...");
+        if (!STOCK_MAPPING[ticker]) return msg.reply(`❌ Saham tidak terdaftar.\nList: ${Object.keys(STOCK_MAPPING).join(', ')}`);
+        if (!market.prices[ticker] || !market.prices[ticker].price) return msg.reply("⏳ Sedang mengambil data pasar... Coba 5 detik lagi.");
         
         const price = market.prices[ticker].price;
         let qty = parseInt(qtyRaw);
@@ -241,12 +248,12 @@ module.exports = async (command, args, msg, user, db, sock) => {
         qty = parseInt(qty);
 
         if (isNaN(qty) || qty < 1 || qty > p.qty) return msg.reply("❌ Jumlah salah.");
-        if (!market.prices[ticker]) return msg.reply("❌ Data pasar loading...");
+        if (!market.prices[ticker]) return msg.reply("❌ Data pasar belum siap.");
 
         const price = market.prices[ticker].price;
         const gross = price * qty;
 
-        let taxRate = user.balance > 100_000_000_000_000 ? 0.05 : 0.001; 
+        let taxRate = user.balance > 100_000_000_000_000 ? 0.30 : 0.05; 
         const tax = Math.floor(gross * taxRate);
         const net = gross - tax;
 
