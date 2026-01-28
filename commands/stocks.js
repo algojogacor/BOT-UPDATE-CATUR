@@ -1,11 +1,10 @@
 const axios = require('axios');
-const cheerio = require('cheerio'); 
 const { saveDB } = require('../helpers/database');
 
 // HELPER FORMAT ANGKA
 const fmt = (num) => Math.floor(Number(num)).toLocaleString('id-ID');
 
-// DAFTAR SAHAM
+// DAFTAR SAHAM (Tetap pakai format .JK)
 const STOCK_MAPPING = {
     'BBCA': 'BBCA.JK',
     'BBRI': 'BBRI.JK',
@@ -28,45 +27,45 @@ module.exports = async (command, args, msg, user, db) => {
     const market = db.stockMarket;
     const now = Date.now();
     
-    // Update data setiap 1 detik
-    const CACHE_TIME = 1 * 1000; 
+    // Update data setiap 1 menit
+    const CACHE_TIME = 60 * 1000; 
 
     // ============================================================
-    // 📡 FETCH REAL DATA
+    // 📡 FETCH REAL DATA (PAKAI JALUR BELAKANG JSON)
     // ============================================================
     if (now - market.lastUpdate > CACHE_TIME) {
         try {
+            // console.log("🔄 Fetching via Yahoo Query API...");
             
-            // Header Palsu (Agar dikira Browser Manusia)
+            // Header Minimalis (Biar dikira aplikasi HP, bukan bot)
             const headers = {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
-                'Accept-Language': 'en-US,en;q=0.9'
+                'User-Agent': 'Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)'
             };
 
             for (const [ticker, symbol] of Object.entries(STOCK_MAPPING)) {
                 try {
-                    // Request HTML Halaman Saham
-                    const url = `https://finance.yahoo.com/quote/${symbol}`;
+                    // URL RAIT (Hidden API) - Mengembalikan JSON Ringan
+                    const url = `https://query1.finance.yahoo.com/v8/finance/chart/${symbol}?interval=1d&range=1d`;
+                    
                     const { data } = await axios.get(url, { headers });
                     
-                    // Parsing HTML dengan Cheerio
-                    const $ = cheerio.load(data);
+                    // Parsing JSON dari Yahoo
+                    const result = data.chart.result[0];
+                    const meta = result.meta;
                     
-                    // Yahoo menaruh harga di tag <fin-streamer>
-                    // Kita ambil value dari atributnya
-                    const priceRaw = $('fin-streamer[data-field="regularMarketPrice"]').attr('value');
-                    const changeRaw = $('fin-streamer[data-field="regularMarketChangePercent"]').attr('value');
-                    
-                    if (priceRaw) {
+                    if (meta) {
+                        const currentPrice = meta.regularMarketPrice;
+                        const prevClose = meta.chartPreviousClose;
+                        const changePct = ((currentPrice - prevClose) / prevClose) * 100;
+
                         market.prices[ticker] = {
-                            price: parseFloat(priceRaw),
-                            change: parseFloat(changeRaw) || 0,
+                            price: currentPrice,
+                            change: changePct || 0,
                             name: ticker
                         };
                     } 
                 } catch (err) {
-                    console.error(`⚠️ Gagal scrape ${ticker}: ${err.message}`);
+                    console.error(`⚠️ Gagal fetch ${ticker}: ${err.message}`);
                     // Biarkan pakai harga lama di cache kalau gagal
                 }
             }
@@ -75,7 +74,7 @@ module.exports = async (command, args, msg, user, db) => {
             saveDB(db);
 
         } catch (error) {
-            console.error("❌ Stock Scraping Error:", error.message);
+            console.error("❌ Stock API Error:", error.message);
         }
     }
 
@@ -95,7 +94,7 @@ module.exports = async (command, args, msg, user, db) => {
         let statusPasar = isMarketOpen ? '🟢 BUKA' : '🔴 TUTUP';
 
         let txt = `📈 *BURSA EFEK INDONESIA (IDX)*\n`;
-        txt += `Status: ${statusPasar} _(Real-Time)_\n`;
+        txt += `Status: ${statusPasar} _(Real-Time JSON)_\n`;
         txt += `------------------\n`;
 
         let naik = 0; let turun = 0;
