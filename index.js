@@ -16,6 +16,7 @@ const valasCmd = require('./commands/valas');
 const stocksCmd = require('./commands/stocks');
 const farmingCmd = require('./commands/farming');
 const ternakCmd = require('./commands/ternak');
+const miningCmd = require('./commands/mining');
 const devCmd = require('./commands/developer');
 const cryptoCmd = require('./commands/crypto'); 
 const bolaCmd = require('./commands/bola');         
@@ -255,6 +256,7 @@ async function startBot() {
                 weekly: { id: "weekly", name: "Weekly Warrior", progress: 0, target: 100, reward: 2000, claimed: false },
                 lastReset: today
             };
+            
 
            // A. REGISTER NEW USER (Jika user belum ada di database)
     if (!db.users[sender]) {
@@ -316,11 +318,13 @@ async function startBot() {
     
     // 3. Pertanian & Industri
     if (!user.farm) user.farm = { plants: [], inventory: {}, machines: [], processing: [] };
-    
+
+    // 4. Mining 
+    if (!user.mining) user.mining = { racks: [], lastClaim: 0, totalHash: 0 };
+            
     // 4. Profesi & Kriminal
     if (!user.job) user.job = null;
     if (!user.lastWork) user.lastWork = 0;
-    if (!user.jailExpired) user.jailExpired = 0;
 
             // ANTI TOXIC
             const toxicWords = ["anjing", "kontol", "memek", "goblok", "idiot", "babi", "tolol", "ppq", "jembut"];
@@ -495,6 +499,7 @@ async function startBot() {
             await cryptoCmd(command, args, msg, user, db).catch(e => console.error("Error Crypto:", e.message));
             await propertyCmd(command, args, msg, user, db).catch(e => console.error("Error Property:", e.message));
             await minesCmd(command, args, msg, user, db).catch(e => console.error("Error Mines:", e.message));
+            await miningCmd(command, args, msg, user, db).catch(e => console.error("Error Mining:", e.message));
             await duelCmd(command, args, msg, user, db).catch(e => console.error("Error Duel:", e.message));
             await bolaCmd(command, args, msg, user, db, sender).catch(e => console.error("Error Bola:", e.message));
             await nationCmd(command, args, msg, user, db).catch(e => console.error("Error Nation:", e.message));
@@ -755,34 +760,3 @@ async function startBot() {
 }
 
 startBot();
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
