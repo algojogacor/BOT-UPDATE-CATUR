@@ -12,6 +12,7 @@ const economyCmd = require('./commands/economy');
 const jobsCmd = require('./commands/jobs');
 const chartCmd = require('./commands/chart');
 const propertyCmd = require('./commands/property'); 
+const valasCmd = require('./commands/valas');
 const stocksCmd = require('./commands/stocks');
 const farmingCmd = require('./commands/farming');
 const ternakCmd = require('./commands/ternak');
@@ -255,34 +256,71 @@ async function startBot() {
                 lastReset: today
             };
 
-           if (!db.users[sender]) {
-    const totalUsers = Object.keys(db.users).length; 
-    
-    db.users[sender] = {
-        id: totalUsers + 1, 
-        balance: 15000000,
-        xp: 0, 
-        level: 1, 
-        inv: [], 
-        buffs: {}, 
-        lastDaily: 0,
-        bolaWin: 0, bolaTotal: 0, bolaProfit: 0, 
-        crypto: {}, debt: 0, bank: 0, 
-        quest: JSON.parse(JSON.stringify(defaultQuest))
-    };
-}
-            const user = db.users[sender];
-            if (!user) return; 
-            user.lastSeen = Date.now();
-            user.name = pushName;
+           // A. REGISTER NEW USER (Jika user belum ada di database)
+    if (!db.users[sender]) {
+        const totalUsers = Object.keys(db.users).length;
+        
+        db.users[sender] = {
+            // --- DATA UTAMA ---
+            id: totalUsers + 1,
+            name: pushName || "User",
+            balance: 15000000, // Modal Awal 15 Juta
+            bank: 0,
+            debt: 0,
+            xp: 0,
+            level: 1,
+            
+            // --- FITUR LAMA (RPG/Gacha) ---
+            inv: [],
+            buffs: {},
+            lastDaily: 0,
+            bolaWin: 0, bolaTotal: 0, bolaProfit: 0,
+            crypto: {},
+            quest: typeof defaultQuest !== 'undefined' ? JSON.parse(JSON.stringify(defaultQuest)) : { daily: [], weekly: null },
 
-            // Auto-Fix Data User
-            if (!user.crypto) user.crypto = {};
-            if (typeof user.debt === 'undefined') user.debt = 0;
-            if (typeof user.bank === 'undefined') user.bank = 0; 
-            if (!user.id) user.id = Object.keys(db.users).indexOf(sender) + 1; 
-            if (typeof user.balance === 'undefined') user.balance = 0;
-            if (!user.quest) user.quest = JSON.parse(JSON.stringify(defaultQuest));
+            // --- FITUR BARU (EKONOMI & SIMULASI) ---
+            // Wajib ada supaya bot tidak crash saat command dijalankan
+            forex: { usd: 0, eur: 0, jpy: 0, emas: 0 }, // Aset Valas
+            ternak: [], // List Hewan
+            ternak_inv: { dedak: 0, pelet: 0, premium: 0, obat: 0 }, // Pakan
+            farm: { plants: [], inventory: {}, machines: [], processing: [] }, // Pertanian
+            job: null, lastWork: 0, lastSkill: 0, // Profesi
+        };
+        console.log(`[NEW USER] ${pushName} registered with ID ${totalUsers + 1}`);
+    }
+
+    // B. LOAD USER & SAFETY CHECK (AUTO-FIX)
+    // Bagian ini menjamin USER LAMA (Legacy) mendapatkan properti baru tanpa reset data.
+    const user = db.users[sender];
+    if (!user) return; // Safety check
+
+    // Update info dasar
+    user.lastSeen = Date.now();
+    user.name = pushName || user.name || "User";
+
+    // --- CEK & PERBAIKI DATA LAMA ---
+    if (!user.id) user.id = Object.keys(db.users).indexOf(sender) + 1;
+    if (typeof user.balance === 'undefined') user.balance = 0;
+    if (typeof user.bank === 'undefined') user.bank = 0;
+    if (typeof user.debt === 'undefined') user.debt = 0;
+    if (!user.crypto) user.crypto = {};
+    if (!user.quest && typeof defaultQuest !== 'undefined') user.quest = JSON.parse(JSON.stringify(defaultQuest));
+
+    // --- CEK & PERBAIKI FITUR BARU (Agar user lama tidak error) ---
+    // 1. Valas & Emas
+    if (!user.forex) user.forex = { usd: 0, eur: 0, jpy: 0, emas: 0 };
+    
+    // 2. Peternakan
+    if (!user.ternak) user.ternak = [];
+    if (!user.ternak_inv) user.ternak_inv = { dedak: 0, pelet: 0, premium: 0, obat: 0 };
+    
+    // 3. Pertanian & Industri
+    if (!user.farm) user.farm = { plants: [], inventory: {}, machines: [], processing: [] };
+    
+    // 4. Profesi & Kriminal
+    if (!user.job) user.job = null;
+    if (!user.lastWork) user.lastWork = 0;
+    if (!user.jailExpired) user.jailExpired = 0;
 
             // ANTI TOXIC
             const toxicWords = ["anjing", "kontol", "memek", "goblok", "idiot", "babi", "tolol", "ppq", "jembut"];
@@ -461,9 +499,10 @@ async function startBot() {
             await bolaCmd(command, args, msg, user, db, sender).catch(e => console.error("Error Bola:", e.message));
             await nationCmd(command, args, msg, user, db).catch(e => console.error("Error Nation:", e.message));
             await robCmd(command, args, msg, user, db).catch(e => console.error("Error Rob:", e.message));
-            await farmingCmd(command, args, msg, user, db);.catch(e => console.error("Error Farming:", e.message));
-            await ternakCmd(command, args, msg, user, db);
-            await jobsCmd(command, args, msg, user, db);
+            await valasCmd(command, args, msg, user, db).catch(e => console.error("Error Valas:", e.message));
+            await farmingCmd(command, args, msg, user, db).catch(e => console.error("Error Farming:", e.message));
+            await ternakCmd(command, args, msg, user, db).catch(e => console.error("Error Ternak:", e.message));
+            await jobsCmd(command, args, msg, user, db).catch(e => console.error("Error Jobs:", e.message));
             await rouletteCmd(command, args, msg, user, db).catch(e => console.error("Error Roulette:", e.message));
             await battleCmd(command, args, msg, user, db).catch(e => console.error("Error Battle:", e.message));
             await ttsCmd(command, args, msg).catch(e => console.error("Error TTS:", e.message));
@@ -707,6 +746,7 @@ async function startBot() {
 }
 
 startBot();
+
 
 
 
