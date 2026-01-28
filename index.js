@@ -651,8 +651,8 @@ async function startBot() {
 • !sellcrypto <koin> <jml>
 • !mining | !margin | !paydebt
 
-📈 *PASAR SAHAM (STOCK MARKET)*
-• !saham        : Cek harga saham Real-time (IHSG)
+📈 *PASAR SAHAM BEI*
+• !saham        : Cek harga saham Real-time
 • !belisaham <kode> <jml> : Beli saham
 • !jualsaham <kode> <jml> : Jual saham
 • !pf/!porto           : Cek Portofolio Saham & Aset
@@ -663,14 +663,14 @@ async function startBot() {
 • !beliusaha <id> <jml> : Beli bisnis baru
 • !collect      : Panen uang dari bisnis
 
-🌾 *FARMING & INDUSTRI (HAYDAY)*
+🌾 *FARMING & INDUSTRI*
 • !farming (Panduan Lengkap)
 • !tanam <tanaman> | !panen
 • !ladang | !pasar | !jual <barang>
 • !toko (Beli Mesin) | !pabrik
 • !olah <mesin> (Produksi Barang Jadi)
 
-🐔 *PETERNAKAN (LIVESTOCK)*
+🐔 *PETERNAKAN*
 • !ternak (📖 PANDUAN LENGKAP)
 • !kandang (Cek Hewan & Status)
 • !tokopakan (Beli Pakan & Obat)
@@ -685,6 +685,15 @@ async function startBot() {
 • !kerja (Ambil Gaji)
 • !skill (Kekuatan Khusus)
 • !resign (Keluar)
+
+💱 *INVESTASI VALAS*
+• !kurs       : Cek harga Emas/USD/JPY (Live)
+• !aset       : Cek portofolio tabungan valas
+• !beliemas <gram> : Beli Emas (Safe Haven)
+• !jualemas <gram> : Jual Emas ke Rupiah
+• !beliusd <jml>   : Beli Dollar Amerika
+• !belijpy <jml>   : Beli Yen Jepang
+• !jualusd | !jualjpy : Jual mata uang asing
 
 🎮 *GAMES*
 • !gacha (Jackpot 10k!)
@@ -746,6 +755,7 @@ async function startBot() {
 }
 
 startBot();
+
 
 
 
