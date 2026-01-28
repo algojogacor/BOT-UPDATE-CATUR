@@ -167,8 +167,8 @@ module.exports = async (command, args, msg, user, db) => {
         const gross = Math.floor(amount * currentPrice);
 
         // PAJAK PROGRESIF
-        let taxRate = 0.05; // 5% Standard
-        if (user.balance > 100_000_000_000_000) taxRate = 0.35; // 35% Sultan
+        let taxRate = 0.002; // 0.2% Standard
+        if (user.balance > 100_000_000_000_000) taxRate = 0.5; // 5%
 
         const fee = Math.floor(gross * 0.01);
         const tax = Math.floor(gross * taxRate);
@@ -249,3 +249,4 @@ module.exports = async (command, args, msg, user, db) => {
          return msg.reply(txt);
     }
 };
+
