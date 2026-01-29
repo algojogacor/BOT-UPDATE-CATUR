@@ -684,7 +684,7 @@ async function startBot() {
 • !market | !pf | !topcrypto
 • !buycrypto <koin> <jml>
 • !sellcrypto <koin> <jml>
-• !mining | !margin | !paydebt
+• !margin | !paydebt
 
 📈 *PASAR SAHAM BEI*
 • !saham        : Cek harga saham Real-time
@@ -698,21 +698,22 @@ async function startBot() {
 • !beliusaha <id> <jml> : Beli bisnis baru
 • !collect      : Panen uang dari bisnis
 
-🌾 *FARMING & INDUSTRI*
-• !farming (Panduan Lengkap)
-• !tanam <tanaman> | !panen
-• !ladang | !pasar | !jual <barang>
-• !toko (Beli Mesin) | !pabrik
-• !olah <mesin> (Produksi Barang Jadi)
+🏭 *FARMING & INDUSTRI*
+• !farming : Panduan Bertani
+• !tanam <nama> : Mulai menanam (Sawit/Kopi/dll)
+• !ladang : Cek kebun & panen
+• !toko : Beli Mesin Pabrik (Gilingan/Roaster/dll)
+• !olah <mesin> <jml> : Masukkan bahan ke pabrik
+• !pabrik : Cek status & ambil hasil olahan
+• !jual <nama> : Jual hasil tani/pabrik
 
-🐔 *PETERNAKAN*
-• !ternak (📖 PANDUAN LENGKAP)
-• !kandang (Cek Hewan & Status)
-• !tokopakan (Beli Pakan & Obat)
-• !belihewan <jenis> (Ayam/Sapi/dll)
-• !pakan <no> <jenis> (Beri Makan)
-• !obati <no> (Sembuhkan Sakit)
-• !jualhewan <no> (Panen)
+🤠 *PETERNAKAN (RANCH)*
+• !ternak : Panduan Ternak
+• !kandang : Cek kondisi hewan (Lapar/Sakit)
+• !belihewan <jenis> : Investasi Sapi/Unta/dll
+• !tokopakan : Beli Pakan & Obat
+• !pakan <no> <jenis> : Beri makan biar gemuk
+• !jualhewan <no> : Panen hewan (Jual daging)
 
 💼 *PEKERJAAN (JOBS)*
 • !jobs (List Lowongan)
@@ -752,11 +753,15 @@ async function startBot() {
 • !ask <tanya> (Auto-Pilot)
 • !sharechat (Buat Link History) 
 
-⛏️ *CRYPTO MINING (BARU!)*
-• !mining : Cek Rig, Hashrate & Income
-• !belivga <tipe> : Rakit PC Mining
-• !claimmining : Panen Bitcoin ke Dompet
-• !overclock : Paksa mesin 2x Speed (Awas Meledak!)
+⛏️ *MINING*
+• !mining : Dashboard, Status Rig & Listrik
+• !panduanminer : 📘 *BACA DULU BIAR GA RUGI!*
+• !claimmining : Panen BTC (Otomatis bayar listrik)
+• !shopminer : Toko VGA Legal (Harga Naik-Turun)
+• !bm : *Black Market* (Alat Ilegal & Kencang)
+• !upgrade : Beli Cooling, PSU & Firewall
+• !hack @user : Curi BTC Orang (PvP)
+• !topminer : Ranking Pemilik Bitcoin
 
 🏳️ *NEGARA (WAR)*
 • !negara : Cek status & infrastruktur
@@ -801,6 +806,7 @@ async function startBot() {
 }
 
 startBot();
+
 
 
 
