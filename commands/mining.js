@@ -46,7 +46,17 @@ const updateMarketPrices = (db) => {
 };
 
 module.exports = async (command, args, msg, user, db, sock) => {
-    const validCommands = ['mining', 'miner', 'belivga', 'claimmining', 'shopminer', 'blackmarket', 'bm', 'upgrade', 'hack', 'topminer'];
+    const validCommands = [
+        'mining', 'miner', 
+        'belivga', 'buyvga', 'shopminer', 
+        'claimmining', 
+        'blackmarket', 'bm', 
+        'upgrade', 
+        'hack', 
+        'topminer',
+        'panduanminer', 'rulesminer', 'guide'
+    ];
+    
     if (!validCommands.includes(command)) return;
 
     const now = Date.now();
