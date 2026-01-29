@@ -715,6 +715,27 @@ async function startBot() {
 • !pakan <no> <jenis> : Beri makan biar gemuk
 • !jualhewan <no> : Panen hewan (Jual daging)
 
+
+🏭 *Sixteen Industri* 🏭
+_Ubah hasil ternak jadi produk premium!_
+
+👑 *KHUSUS BOS (OWNER)*
+├ 🏭 !pabrik : Cek status pabrik & mesin
+├ 🏗️ !bangunpabrik <tipe> : Beli mesin produksi
+├ 🤝 !rekrut @tag : Pekerjakan member grup
+├ 👢 !pecat @tag : Pecat karyawan
+├ 📦 !gudang : Cek stok bahan & produk
+├ 💰 !jualproduk <kode> : Jual barang ke pasar
+├ 🔧 !service : Perbaiki mesin rusak
+└ 💹 !cekpasar : Cek harga jual live
+
+👷 *KHUSUS KARYAWAN (BURUH)*
+├ 🪪 !pabrik : Cek stamina & majikan
+├ ⚙️ !olah <bahan> <jumlah> : Proses produksi
+└ 🚪 !resign : Keluar dari pabrik
+📚 *PANDUAN*
+└ 📖 !pabrik help : Lihat resep & harga mesin
+
 💼 *PEKERJAAN (JOBS)*
 • !jobs (List Lowongan)
 • !lamar <nama> (Join Job)
@@ -806,6 +827,7 @@ async function startBot() {
 }
 
 startBot();
+
 
 
 
