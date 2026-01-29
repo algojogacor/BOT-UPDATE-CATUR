@@ -37,7 +37,8 @@ const UPGRADES = {
 const recalculateStats = (userData) => {
     let total = 0;
     let illegal = 0;
-    if (userData.mining && userData.mining.racks) {
+    // Pastikan array racks ada
+    if (userData.mining && Array.isArray(userData.mining.racks)) {
         userData.mining.racks.forEach(id => {
             if (HARDWARE[id]) {
                 total += HARDWARE[id].hashrate;
@@ -83,8 +84,15 @@ module.exports = async (command, args, msg, user, db, sock) => {
     const now = Date.now();
     updateMarketPrices(db);
 
-    // INIT DATA USER
+    // ============================================================
+    // 🚑 AUTO-FIX DATA (PENTING BUAT USER LAMA)
+    // ============================================================
     if (!user.mining) user.mining = { racks: [], lastClaim: now, totalHash: 0, upgrades: {} };
+    // Fix Crash: Pastikan upgrades ada objectnya
+    if (!user.mining.upgrades) user.mining.upgrades = {}; 
+    // Fix Crash: Pastikan racks ada arraynya
+    if (!user.mining.racks) user.mining.racks = [];
+    
     if (!user.crypto) user.crypto = { btc: 0 };
 
     // HITUNG ULANG STATS SETIAP JALAN COMMAND
@@ -123,6 +131,8 @@ module.exports = async (command, args, msg, user, db, sock) => {
         let eventMsg = "";
         if (totalHash > 0 && Math.random() < 0.2) { 
             const ev = Math.random() < 0.5 ? 'overheat' : 'lucky';
+            
+            // Cek Cooling (Aman karena upgrades udah di-init di atas)
             if (ev === 'overheat' && !user.mining.upgrades.cooling) {
                 user.mining.lastClaim = now; 
                 eventMsg = `🔥 *OVERHEAT!* Mesin kepanasan, waktu mining reset.`;
@@ -137,6 +147,8 @@ module.exports = async (command, args, msg, user, db, sock) => {
         const diffHours = (now - user.mining.lastClaim) / (1000 * 60 * 60);
         let pendingBTC = (totalHash * BTC_PER_HASH_HOUR * diffHours);
         let elecCost = totalHash * ELECTRICITY_COST * diffHours;
+        
+        // Cek PSU (Aman)
         if (user.mining.upgrades.psu) elecCost *= 0.7;
 
         const btcPrice = db.market?.forex?.usd ? (db.market.forex.usd * 63000) : 1500000000;
@@ -170,6 +182,8 @@ module.exports = async (command, args, msg, user, db, sock) => {
 
         let earnedBTC = (totalHash * BTC_PER_HASH_HOUR * diffHours);
         let elecBill = totalHash * ELECTRICITY_COST * diffHours;
+        
+        // Cek PSU
         if (user.mining.upgrades.psu) elecBill *= 0.7;
 
         if (user.balance < elecBill) {
