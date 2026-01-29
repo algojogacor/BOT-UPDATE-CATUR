@@ -218,7 +218,7 @@ module.exports = async (command, args, msg, user, db, sock) => {
         if (isNaN(qty) || qty < 1) return msg.reply("❌ Jumlah lembar salah.");
 
         const rawCost = price * qty;
-        const fee = Math.floor(rawCost * 0.003);
+        const fee = Math.floor(rawCost * 0.0015);
         const total = rawCost + fee;
 
         if (user.balance < total) return msg.reply(`❌ Uang kurang! Butuh Rp ${fmt(total)}`);
@@ -253,7 +253,7 @@ module.exports = async (command, args, msg, user, db, sock) => {
         const price = market.prices[ticker].price;
         const gross = price * qty;
 
-        let taxRate = user.balance > 100_000_000_000_000 ? 0.30 : 0.05; 
+        let taxRate = user.balance > 100_000_000_000_000 ? 0.05 : 0.003; 
         const tax = Math.floor(gross * taxRate);
         const net = gross - tax;
 
@@ -276,7 +276,7 @@ module.exports = async (command, args, msg, user, db, sock) => {
         let totalVal = 0;
         let totalGain = 0;
         let hasStock = false;
-        let rate = user.balance > 100_000_000_000_000 ? 0.30 : 0.05;
+        let rate = user.balance > 100_000_000_000_000 ? 0.30 : 0.003;
 
         for (let [ticker, data] of Object.entries(user.portfolio)) {
             if (data.qty > 0) {
