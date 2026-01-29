@@ -140,7 +140,7 @@ module.exports = async (command, args, msg, user, db) => {
         if (user.balance < nominal) return msg.reply(`❌ Uang kurang. Saldo: Rp ${fmt(user.balance)}`);
 
         const currentPrice = market.prices[koin].price;
-        const fee = nominal * 0.01; // Fee 1%
+        const fee = nominal * 0.001; // Fee 0.1%
         const bersih = nominal - fee;
         const amount = bersih / currentPrice;
 
@@ -249,4 +249,5 @@ module.exports = async (command, args, msg, user, db) => {
          return msg.reply(txt);
     }
 };
+
 
