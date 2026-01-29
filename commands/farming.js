@@ -4,89 +4,83 @@ const { saveDB } = require('../helpers/database');
 const fmt = (num) => Math.floor(Number(num)).toLocaleString('id-ID');
 
 // ==========================================
-// 1. DATA TANAMAN (RE-BALANCED ORDER)
+// 1. DATA TANAMAN (RAW MATERIAL)
 // ==========================================
-// Urutan: Padi -> Jagung -> Bawang -> Kopi -> Sawit
 const CROPS = {
     'padi': { 
-        modal: 2000000,           // 2 Juta
-        duration: 20 * 60 * 1000, // 20 Menit
+        modal: 2000000, duration: 20 * 60 * 1000, 
         minSell: 2200000, maxSell: 2500000 
     }, 
     'jagung': { 
-        modal: 5000000,           // 5 Juta
-        duration: 60 * 60 * 1000, // 1 Jam
+        modal: 5000000, duration: 60 * 60 * 1000, 
         minSell: 6000000, maxSell: 7000000 
     },
     'bawang': { 
-        modal: 10000000,          // 10 Juta (Mid Tier)
-        duration: 2 * 60 * 60 * 1000, // 2 Jam
+        modal: 10000000, duration: 2 * 60 * 60 * 1000, 
         minSell: 13000000, maxSell: 15000000 
     },
     'kopi': { 
-        modal: 25000000,          // 25 Juta (High Tier)
-        duration: 4 * 60 * 60 * 1000, // 4 Jam
+        modal: 25000000, duration: 4 * 60 * 60 * 1000, 
         minSell: 32000000, maxSell: 38000000 
     },
     'sawit': { 
-        modal: 50000000,          // 50 Juta (Endgame/Termahal)
-        duration: 8 * 60 * 60 * 1000, // 8 Jam (Bisa ditinggal kerja/tidur)
+        modal: 50000000, duration: 8 * 60 * 60 * 1000, 
         minSell: 75000000, maxSell: 90000000 
     }
 };
 
 // ==========================================
-// 2. DATA MESIN & RESEP (DISESUAIKAN)
+// 2. DATA MESIN & RESEP (SMART QUEUE)
 // ==========================================
 const MACHINES = {
-    // TIER 1: Padi -> Beras
+    // TIER 1: Padi -> Beras Premium (Margin 140%)
     'gilingan': {
         name: "🌾 Rice Mill",
         price: 50000000, 
         input: 'padi',   
         output: 'beras', 
-        duration: 30 * 60 * 1000, 
-        sellPrice: 4500000 
+        duration: 25 * 60 * 1000, // 25 Menit per item
+        sellPrice: 6000000 // Jual 6 Juta (Bahan 2.5jt)
     },
 
-    // TIER 2: Jagung -> Popcorn
+    // TIER 2: Jagung -> Popcorn Caramel (Margin 157%)
     'popcorn_maker': {
         name: "🍿 Popcorn Maker",
         price: 80000000, 
         input: 'jagung',
         output: 'popcorn',
-        duration: 45 * 60 * 1000, 
-        sellPrice: 12000000 
+        duration: 30 * 60 * 1000, 
+        sellPrice: 18000000 // Jual 18 Juta (Bahan 7jt)
     },
 
-    // TIER 3: Bawang -> Bawang Goreng (NEW)
+    // TIER 3: Bawang -> Bawang Goreng Soy (Margin 166%)
     'penggorengan': {
         name: "🥘 Fried Onion Machine",
-        price: 150000000, // Modal 150 Juta
+        price: 150000000, 
         input: 'bawang',
         output: 'bawang_goreng',
-        duration: 90 * 60 * 1000, // 1.5 Jam
-        sellPrice: 25000000 // Jual 25 Juta
+        duration: 45 * 60 * 1000, // 1 Jam per item
+        sellPrice: 40000000 // Jual 40 Juta (Bahan 15jt)
     },
 
-    // TIER 4: Kopi -> Kopi Bubuk
+    // TIER 4: Kopi -> Espresso Powder (Margin 163%)
     'roaster': {
         name: "☕ Coffee Roaster",
-        price: 300000000, // Modal 300 Juta
+        price: 300000000, 
         input: 'kopi',
         output: 'kopi_bubuk',
-        duration: 3 * 60 * 60 * 1000, // 3 Jam
-        sellPrice: 65000000 // Jual 65 Juta
+        duration: 1 * 60 * 60 * 1000, // 1 Jam per item
+        sellPrice: 100000000 // Jual 100 Juta (Bahan 38jt)
     },
 
-    // TIER 5: Sawit -> Minyak Goreng (ULTIMATE)
+    // TIER 5: Sawit -> Minyak Goreng Emas (Margin 200%++)
     'penyulingan': {
         name: "🛢️ CPO Refinery",
-        price: 1000000000, // Modal 1 Miliar (Mesin Sultan)
+        price: 1000000000, 
         input: 'sawit',
         output: 'minyak',
-        duration: 6 * 60 * 60 * 1000, // 6 Jam
-        sellPrice: 200000000 // Jual 200 Juta (Jackpot!)
+        duration: 2 * 60 * 60 * 1000, // 2 Jam per item
+        sellPrice: 250000000 // Jual 250 Juta (Bahan 90jt)
     }
 };
 
@@ -99,31 +93,24 @@ module.exports = async (command, args, msg, user, db) => {
     if (!db.market.commodities) db.market.commodities = {};
 
     // ============================================================
-    // 📘 PANDUAN / TUTORIAL (!farmer)
+    // 📘 PANDUAN (!farmer)
     // ============================================================
     if (command === 'farming' || command === 'farmer' || command === 'tani') {
-        let txt = `🌾 *PANDUAN FARMING & INDUSTRI* 🏭\n`;
-        txt += `_Simulasi ekonomi sektor riil: Tanam, Olah, Cuan!_\n\n`;
+        let txt = `🌾 *PANDUAN FARMING & INDUSTRI 3.0* 🏭\n`;
+        txt += `_Fitur Baru: Klaim Bertahap (Incremental Claim)_\n\n`;
 
-        txt += `👨‍🌾 *TAHAP 1: BERTANI (Modal Kecil)*\n`;
-        txt += `1. \`!tanam <nama>\` : Menanam bibit (Padi/Jagung/Bawang/Kopi/Sawit).\n`;
-        txt += `2. \`!ladang\` : Cek umur tanaman & isi gudang.\n`;
-        txt += `3. \`!panen\` : Mengambil hasil tanaman yang matang.\n`;
-        txt += `4. \`!pasar\` : Cek harga jual bahan mentah.\n\n`;
+        txt += `🏭 *LOGIKA PABRIK:*\n`;
+        txt += `• Kamu bisa masukkan banyak bahan sekaligus (Antrian).\n`;
+        txt += `• Setiap 1 item selesai diproses, bisa langsung diambil.\n`;
+        txt += `• Ketik \`!pabrik\` untuk memindahkan barang jadi ke Gudang.\n\n`;
 
-        txt += `🏭 *TAHAP 2: INDUSTRI (Juragan)*\n`;
-        txt += `1. \`!toko\` : Cek harga & fungsi mesin pabrik.\n`;
-        txt += `2. \`!beli <mesin>\` : Beli mesin (Investasi).\n`;
-        txt += `3. \`!olah <mesin>\` : Proses bahan mentah jadi barang jadi.\n`;
-        txt += `4. \`!pabrik\` : Cek status produksi mesin.\n\n`;
+        txt += `💰 *CONTOH:*\n`;
+        txt += `• Masukkan 5 Padi ke Gilingan.\n`;
+        txt += `• Setelah 30 menit, 1 Beras selesai.\n`;
+        txt += `• Ketik \`!pabrik\`, 1 Beras masuk gudang dan bisa dijual.\n`;
+        txt += `• 4 Padi sisanya lanjut diproses otomatis.\n\n`;
 
-        txt += `💰 *TAHAP 3: PENJUALAN*\n`;
-        txt += `👉 \`!jual <nama_barang>\`\n`;
-        txt += `_Contoh: !jual beras (Jual barang jadi lebih mahal!)_\n\n`;
-
-        txt += `💡 *STRATEGI KAYA:*\n`;
-        txt += `Targetkan beli mesin *CPO Refinery* (1 Miliar) untuk mengolah Sawit menjadi Emas Cair!`;
-
+        txt += `💡 Gunakan \`!jual <nama>\` untuk menjual hasil.`;
         return msg.reply(txt);
     }
     
@@ -143,18 +130,23 @@ module.exports = async (command, args, msg, user, db) => {
     // ============================================================
     if (command === 'toko' || command === 'beli') {
         if (!args[0]) {
-            let txt = `🏭 *TOKO MESIN INDUSTRI*\n_Beli mesin untuk mengolah hasil panen agar lebih mahal!_\n\n`;
+            let txt = `🏭 *TOKO MESIN INDUSTRI*\n`;
+            const ownedCounts = {};
+            user.farm.machines.forEach(m => { ownedCounts[m] = (ownedCounts[m] || 0) + 1; });
+
             for (let [code, m] of Object.entries(MACHINES)) {
-                const status = user.farm.machines.includes(code) ? "✅ DIMILIKI" : `💰 Rp ${fmt(m.price)}`;
-                txt += `🔧 *${m.name}* (${code})\n   Bahan: ${m.input.toUpperCase()} ➡️ ${m.output.toUpperCase()}\n   Harga: ${status}\n\n`;
+                const count = ownedCounts[code] || 0;
+                txt += `🔧 *${m.name}* (${code})\n`;
+                txt += `   Output: ${m.output.toUpperCase()}\n`;
+                txt += `   💰 Harga: Rp ${fmt(m.price)}\n`;
+                txt += `   ✅ Dimiliki: ${count} Unit\n\n`;
             }
-            txt += `💡 Cara beli: \`!beli gilingan\``;
+            txt += `💡 Ketik \`!beli gilingan\` untuk beli.`;
             return msg.reply(txt);
         }
 
         const item = args[0].toLowerCase();
         if (!MACHINES[item]) return msg.reply("❌ Mesin tidak ditemukan.");
-        if (user.farm.machines.includes(item)) return msg.reply("❌ Kamu sudah punya mesin ini!");
 
         const price = MACHINES[item].price;
         if (user.balance < price) return msg.reply(`❌ Uang kurang! Butuh Rp ${fmt(price)}`);
@@ -166,76 +158,131 @@ module.exports = async (command, args, msg, user, db) => {
     }
 
     // ============================================================
-    // 🏭 FITUR PABRIK (PRODUKSI)
+    // 🏭 FITUR PABRIK (MASUKKAN KE ANTRIAN)
     // ============================================================
     if (command === 'olah' || command === 'produksi') {
         const machineCode = args[0]?.toLowerCase();
+        let qty = parseInt(args[1]) || 1; 
         
-        if (!machineCode || !MACHINES[machineCode]) return msg.reply("❌ Format: `!olah <nama_mesin>`\nCek nama mesin di `!toko`");
-        if (!user.farm.machines.includes(machineCode)) return msg.reply("❌ Kamu belum punya mesin ini. Beli di `!toko`.");
+        if (!machineCode || !MACHINES[machineCode]) return msg.reply("❌ Format: `!olah <nama_mesin> <jumlah>`");
+        
+        const totalMachines = user.farm.machines.filter(m => m === machineCode).length;
+        if (totalMachines === 0) return msg.reply("❌ Kamu belum punya mesin ini.");
 
-        // Cek apakah mesin sedang dipakai? (1 Mesin = 1 Slot Antrian)
-        const isBusy = user.farm.processing.find(p => p.machine === machineCode);
-        if (isBusy) return msg.reply(`⏳ Mesin sedang bekerja! Tunggu selesai.`);
+        // Cek mesin yang sibuk
+        // Di sistem baru, satu entry di 'processing' dianggap satu mesin yang sedang bekerja pada satu batch
+        const activeBatches = user.farm.processing.filter(p => p.machine === machineCode);
+        
+        if (activeBatches.length >= totalMachines) {
+            return msg.reply(`⏳ Semua mesin ${MACHINES[machineCode].name} sedang bekerja! Tunggu antrian atau beli mesin baru.`);
+        }
 
         const m = MACHINES[machineCode];
         const inputItem = m.input;
 
-        // Cek Bahan Baku
-        if (!user.farm.inventory[inputItem] || user.farm.inventory[inputItem] < 1) {
-            return msg.reply(`❌ Bahan baku kurang!\nButuh 1 Ton ${inputItem.toUpperCase()} di gudang.`);
+        if (!user.farm.inventory[inputItem] || user.farm.inventory[inputItem] < qty) {
+            return msg.reply(`❌ Bahan baku kurang! Butuh ${qty} ${inputItem.toUpperCase()}.`);
         }
 
-        // Proses
-        user.farm.inventory[inputItem] -= 1; // Kurangi stok mentah
+        user.farm.inventory[inputItem] -= qty; 
+        
+        // Push ke processing dengan timestamp MULAI
         user.farm.processing.push({
             machine: machineCode,
             product: m.output,
-            finishAt: now + m.duration
+            qty: qty,               // Sisa antrian dalam batch ini
+            durationPerItem: m.duration,
+            startedAt: now          // Waktu mulai item PERTAMA (atau item saat ini)
         });
 
         saveDB(db);
-        return msg.reply(`⚙️ *MESIN BERJALAN...*\nMengolah: ${inputItem.toUpperCase()} ➡️ ${m.product || m.output.toUpperCase()}\n⏳ Waktu: ${m.duration/60000} Menit.`);
+        
+        let txt = `⚙️ *MESIN BERJALAN...*\n`;
+        txt += `📥 Input: ${qty} ${inputItem.toUpperCase()}\n`;
+        txt += `⏱️ Per Item: ${(m.duration/60000).toFixed(0)} Menit\n`;
+        txt += `_Sistem akan memproses satu per satu. Cek !pabrik untuk ambil hasil._`;
+        
+        return msg.reply(txt);
     }
 
     // ============================================================
-    // 🏭 CEK PABRIK (!pabrik)
+    // 🏭 CEK PABRIK (!pabrik) - INCREMENTAL CLAIM SYSTEM 🔥
     // ============================================================
     if (command === 'pabrik') {
-        let txt = `🏭 *STATUS PABRIK*\n\n`;
+        let txt = `🏭 *STATUS PABRIK & ANTRIAN*\n\n`;
         
-        // Cek status mesin
         if (user.farm.processing.length === 0) {
-            txt += "_Semua mesin nganggur._\n";
+            txt += "_Semua mesin hening. Tidak ada produksi._\n";
         } else {
-            let completed = [];
-            let remaining = [];
+            let collectedItems = {}; // Untuk laporan apa aja yg diambil
+            let remainingProcess = []; // Array baru untuk menyimpan sisa antrian
 
             user.farm.processing.forEach(p => {
-                if (now >= p.finishAt) {
-                    // Selesai -> Masuk Inventory
+                const m = MACHINES[p.machine];
+                
+                // Hitung berapa lama sudah berjalan sejak startedAt
+                const elapsedTime = now - p.startedAt;
+                
+                // Hitung berapa item yang SUDAH SELESAI dalam durasi tersebut
+                let finishedCount = Math.floor(elapsedTime / p.durationPerItem);
+
+                // Jangan ambil lebih dari sisa antrian
+                if (finishedCount > p.qty) finishedCount = p.qty;
+
+                // --- LOGIKA KLAIM ---
+                if (finishedCount > 0) {
+                    // Tambah ke inventory
                     if (!user.farm.inventory[p.product]) user.farm.inventory[p.product] = 0;
-                    user.farm.inventory[p.product] += 1;
-                    completed.push(p.product);
-                } else {
-                    const timeLeft = Math.ceil((p.finishAt - now) / 60000);
-                    remaining.push(p);
-                    txt += `⚙️ ${MACHINES[p.machine].name}: ⏳ ${timeLeft} menit lagi\n`;
+                    user.farm.inventory[p.product] += finishedCount;
+
+                    // Catat untuk laporan
+                    if (!collectedItems[p.product]) collectedItems[p.product] = 0;
+                    collectedItems[p.product] += finishedCount;
+
+                    // Update Antrian
+                    p.qty -= finishedCount;
+                    // Majukan waktu start seolah-olah item berikutnya baru mulai sekarang 
+                    // (atau tepatnya: waktu start + durasi item yg sudah jadi)
+                    p.startedAt += (finishedCount * p.durationPerItem);
+                }
+
+                // Jika masih ada sisa antrian, simpan kembali ke array processing
+                if (p.qty > 0) {
+                    // Hitung waktu sisa untuk item yang SEDANG dikerjakan
+                    const currentProgressMs = now - p.startedAt;
+                    const timeLeftMs = p.durationPerItem - currentProgressMs;
+                    const timeLeftMin = Math.ceil(timeLeftMs / 60000);
+
+                    // Progress bar visual
+                    const percent = Math.floor((currentProgressMs / p.durationPerItem) * 10);
+                    const bar = "█".repeat(percent) + "░".repeat(10 - percent);
+
+                    txt += `⚙️ *${m.name}* (Sisa: ${p.qty})\n`;
+                    txt += `   🔄 Proses: [${bar}]\n`;
+                    txt += `   ⏳ Item berikutnya: ${timeLeftMin} Menit lagi\n\n`;
+                    
+                    remainingProcess.push(p);
                 }
             });
 
-            // Update DB jika ada yang selesai
-            if (completed.length > 0) {
-                user.farm.processing = remaining;
-                saveDB(db);
-                txt += `\n✅ *PRODUKSI SELESAI:*\n+ ${completed.join(', ').toUpperCase()}\n_(Otomatis masuk gudang)_`;
+            // Simpan perubahan ke DB
+            user.farm.processing = remainingProcess;
+            saveDB(db);
+
+            // Laporan Klaim
+            if (Object.keys(collectedItems).length > 0) {
+                txt += `✅ *HASIL DIAMBIL (Masuk Gudang):*\n`;
+                for (let [item, qty] of Object.entries(collectedItems)) {
+                    txt += `+ ${qty} ${item.toUpperCase()}\n`;
+                }
+                txt += `\n_Gunakan !jual <nama> untuk jadi uang._\n`;
             }
         }
         return msg.reply(txt);
     }
 
     // ============================================================
-    // 🌱 FITUR LADANG (TANAM - SAMA SEPERTI SEBELUMNYA)
+    // 🌱 FITUR LADANG (TANAM - SAMA)
     // ============================================================
     if (command === 'tanam') {
         const cropName = args[0]?.toLowerCase();
@@ -263,9 +310,15 @@ module.exports = async (command, args, msg, user, db) => {
         });
         
         txt += `\n📦 *GUDANG & PRODUK JADI:*\n`;
+        let hasItem = false;
         for (let [k, v] of Object.entries(user.farm.inventory)) {
-            if (v > 0) txt += `📦 ${k.toUpperCase()}: ${v} Unit\n`;
+            if (v > 0) {
+                txt += `📦 ${k.toUpperCase()}: ${v} Unit\n`;
+                hasItem = true;
+            }
         }
+        if(!hasItem) txt += "_Gudang Kosong_";
+        
         return msg.reply(txt);
     }
 
@@ -286,23 +339,26 @@ module.exports = async (command, args, msg, user, db) => {
     }
 
     // ============================================================
-    // 💰 JUAL (RAW MATERIAL / PRODUK JADI)
+    // 💰 JUAL (AUTO DETECT HARGA)
     // ============================================================
     if (command === 'jual') {
         const item = args[0]?.toLowerCase();
+        let qty = args[1];
+
         if (!item || !user.farm.inventory[item] || user.farm.inventory[item] <= 0) {
-            return msg.reply("❌ Barang kosong di gudang.\nCek `!ladang` untuk lihat stok.");
+            return msg.reply("❌ Barang kosong di gudang.\nCek `!ladang`.");
         }
+
+        if (qty === 'all') qty = user.farm.inventory[item];
+        else qty = parseInt(qty);
+
+        if (isNaN(qty) || qty <= 0 || qty > user.farm.inventory[item]) return msg.reply("❌ Jumlah salah.");
 
         let hargaJual = 0;
 
-        // Cek apakah barang mentah?
         if (db.market.commodities[item]) {
             hargaJual = db.market.commodities[item];
-        } 
-        // Cek apakah barang olahan (Pabrik)?
-        else {
-            // Cari harga di mesin
+        } else {
             for (let key in MACHINES) {
                 if (MACHINES[key].output === item) {
                     hargaJual = MACHINES[key].sellPrice;
@@ -313,23 +369,22 @@ module.exports = async (command, args, msg, user, db) => {
 
         if (hargaJual === 0) return msg.reply("❌ Barang tidak laku dijual.");
 
-        const qty = user.farm.inventory[item];
         const total = hargaJual * qty;
-
         user.balance += total;
-        user.farm.inventory[item] = 0;
+        user.farm.inventory[item] -= qty;
+        if (user.farm.inventory[item] === 0) delete user.farm.inventory[item];
+        
         saveDB(db);
 
         return msg.reply(`💰 *TERJUAL*\nBarang: ${item.toUpperCase()} (${qty} Unit)\n💵 Total: Rp ${fmt(total)}`);
     }
     
-    // Command !pasar hanya untuk cek harga mentah
     if (command === 'pasar') {
-        let txt = `🏪 *PASAR KOMODITAS (BAHAN MENTAH)*\n\n`;
+        let txt = `🏪 *PASAR KOMODITAS*\n\n`;
         for (let [k, v] of Object.entries(db.market.commodities)) {
             txt += `🔹 ${k.toUpperCase()}: Rp ${fmt(v)}\n`;
         }
-        txt += `\n💡 Tips: Olah barang di \`!pabrik\` agar harga jual naik berkali lipat!`;
+        txt += `\n💡 Barang jadi pabrik harganya tetap/mahal.`;
         return msg.reply(txt);
     }
 };
