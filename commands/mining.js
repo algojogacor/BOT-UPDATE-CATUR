@@ -108,15 +108,55 @@ module.exports = async (command, args, msg, user, db, sock) => {
     }
 
     // ============================================================
-    // 📚 PANDUAN
+    // 📚 PANDUAN LENGKAP (!panduanminer)
     // ============================================================
     if (command === 'panduanminer' || command === 'rulesminer' || command === 'guide') {
-        let txt = `📘 *PANDUAN MINING* 📘\n`;
-        txt += `_Baca biar gak rugi bandar!_\n\n`;
-        txt += `⚡ *LISTRIK:* Mining butuh biaya Rp 50/Hash/Jam.\n`;
-        txt += `🛑 *LIMITER:* Mesin otomatis berhenti jika penuh (24 Jam). Jangan lupa claim tiap hari!\n`;
-        txt += `🚔 *POLISI:* Alat Black Market (BM) bisa disita polisi.\n`;
-        txt += `🗑️ *RESET:* Ketik \`!resetmining\` jika ingin mulai dari 0 (Hapus semua alat).\n`;
+        let txt = `📘 *MANUAL OPERASIONAL MINING* 📘\n`;
+        txt += `_Pelajari sistem ekonomi kripto agar asetmu aman!_\n\n`;
+
+        txt += `🛠️ *1. CARA KERJA DASAR*\n`;
+        txt += `• Beli alat di \`!shopminer\` (Legal) atau \`!bm\` (Ilegal).\n`;
+        txt += `• Alat memberikan **Hashrate** (Kecepatan).\n`;
+        txt += `• Semakin tinggi Hashrate, semakin cepat **BTC** terkumpul.\n`;
+        txt += `• Ketik \`!mining\` untuk melihat dashboard & hasil sementara.\n`;
+        txt += `• Ketik \`!claimmining\` untuk memanen BTC ke dompet.\n\n`;
+
+        txt += `⚡ *2. BIAYA LISTRIK (PLN)*\n`;
+        txt += `Mining tidak gratis! Setiap alat menyedot listrik.\n`;
+        txt += `• Biaya: *Rp 50 per 1 MH/s per Jam*.\n`;
+        txt += `• Listrik dibayar OTOMATIS saat kamu \`!claimmining\`.\n`;
+        txt += `• ⚠️ *PERINGATAN:* Jika saldo Rupiah di dompet kurang, kamu *TIDAK BISA* mengambil BTC (Rig disandera PLN).\n\n`;
+
+        txt += `🚔 *3. RISIKO BLACK MARKET (BM)*\n`;
+        txt += `Barang BM (USB Miner/Quantum) memang murah & kencang, TAPI:\n`;
+        txt += `• Setiap kali ketik \`!mining\`, ada risiko *RAZIA POLISI*.\n`;
+        txt += `• Jika tertangkap, *SEMUA ALAT ILEGAL AKAN DISITA*.\n`;
+        txt += `• Alat Legal (RTX/ASIC) aman dari penyitaan.\n`;
+        txt += `• Uang & BTC aman, hanya alat BM yang hilang.\n\n`;
+
+        txt += `🔧 *4. SISTEM UPGRADE (!upgrade)*\n`;
+        txt += `Lindungi asetmu dengan komponen tambahan:\n`;
+        txt += `• ❄️ *Liquid Cooling:* Mencegah kejadian *OVERHEAT* (Reset waktu mining).\n`;
+        txt += `• ⚡ *PSU Platinum:* Diskon tagihan listrik sebesar *30%*.\n`;
+        txt += `• 🛡️ *Firewall:* Kebal dari serangan hacker user lain.\n\n`;
+
+        txt += `⚔️ *5. PVP & HACKING (!hack)*\n`;
+        txt += `Dunia kripto itu kejam. Kamu bisa menyerang miner lain!\n`;
+        txt += `• Ketik \`!hack @user\` untuk mencoba mencuri *5% BTC* mereka.\n`;
+        txt += `• Peluang sukses: *40%*.\n`;
+        txt += `• Jika GAGAL: Kamu didenda *Rp 500.000* oleh Polisi Siber.\n`;
+        txt += `• Target dengan *Firewall* tidak bisa di-hack.\n\n`;
+
+        txt += `📉 *6. DINAMIKA PASAR*\n`;
+        txt += `Harga VGA Legal di \`!shopminer\` berubah setiap *1 Jam*.\n`;
+        txt += `• Bisa *DISKON* (📉) atau *MAHAL* (📈).\n`;
+        txt += `• Pintar-pintarlah membeli saat harga sedang turun!\n\n`;
+
+        txt += `🛑 *7. BATAS WAKTU (LIMITER)*\n`;
+        txt += `Mesin memiliki kapasitas penampungan maksimal *24 Jam*.\n`;
+        txt += `• Jika tidak diklaim > 24 jam, mesin *BERHENTI* menghasilkan BTC.\n`;
+        txt += `• Login dan claim setiap hari agar profit maksimal!`;
+
         return msg.reply(txt);
     }
 
