@@ -11,11 +11,13 @@ const ELECTRICITY_COST = 50; // Rp 50 per Hash/Jam (Biaya Listrik)
 
 // DATA HARDWARE (Base Price)
 const HARDWARE = {
+    // LEGAL
     'rtx4070': { name: "🟢 RTX 4070 Ti", basePrice: 20000000, hashrate: 160, type: 'legal' },
     'rtx4090': { name: "🔵 RTX 4090 OC", basePrice: 50000000, hashrate: 400, type: 'legal' },
     'dual4090': { name: "🟣 Dual 4090", basePrice: 80000000, hashrate: 640, type: 'legal' },
     'asic': { name: "🟠 Antminer S19", basePrice: 100000000, hashrate: 800, type: 'legal' },
-    // BLACK MARKET ITEMS
+    
+    // BLACK MARKET (ILEGAL)
     'usb_miner': { name: "🏴‍☠️ USB Miner Hack", basePrice: 5000000, hashrate: 100, type: 'illegal', risk: 0.1 },
     'quantum_rig': { name: "🏴‍☠️ Quantum Rig", basePrice: 150000000, hashrate: 1500, type: 'illegal', risk: 0.25 }
 };
@@ -28,11 +30,29 @@ const UPGRADES = {
 };
 
 // ============================================================
-// 🔄 LOGIKA MARKET DINAMIS
+// 🔄 FUNGSI BANTUAN (LOGIC)
 // ============================================================
+
+// 1. Hitung Hashrate & Cek Ilegal (Real-time)
+const recalculateStats = (userData) => {
+    let total = 0;
+    let illegal = 0;
+    if (userData.mining && userData.mining.racks) {
+        userData.mining.racks.forEach(id => {
+            if (HARDWARE[id]) {
+                total += HARDWARE[id].hashrate;
+                if (HARDWARE[id].type === 'illegal') illegal++;
+            }
+        });
+    }
+    userData.mining.totalHash = total;
+    return { total, illegal };
+};
+
+// 2. Update Harga Market Dinamis
 const updateMarketPrices = (db) => {
     const now = Date.now();
-    // Update setiap 2 Jam
+    // Update setiap 1 Jam
     if (!db.market.miningPrices || (now - db.market.lastMiningUpdate > 1 * 60 * 60 * 1000)) {
         db.market.miningPrices = {};
         for (let [key, item] of Object.entries(HARDWARE)) {
@@ -46,6 +66,7 @@ const updateMarketPrices = (db) => {
 };
 
 module.exports = async (command, args, msg, user, db, sock) => {
+    // DAFTAR SEMUA COMMAND AGAR AKTIF
     const validCommands = [
         'mining', 'miner', 
         'belivga', 'buyvga', 'shopminer', 
@@ -53,7 +74,7 @@ module.exports = async (command, args, msg, user, db, sock) => {
         'blackmarket', 'bm', 
         'upgrade', 
         'hack', 
-        'topminer',
+        'topminer', 'tophash',
         'panduanminer', 'rulesminer', 'guide'
     ];
     
@@ -66,327 +87,232 @@ module.exports = async (command, args, msg, user, db, sock) => {
     if (!user.mining) user.mining = { racks: [], lastClaim: now, totalHash: 0, upgrades: {} };
     if (!user.crypto) user.crypto = { btc: 0 };
 
+    // HITUNG ULANG STATS SETIAP JALAN COMMAND
+    const { total: totalHash, illegal: illegalCount } = recalculateStats(user);
+
     // ============================================================
-    // 📚 PANDUAN & ATURAN MINING (!panduanminer)
+    // 📚 PANDUAN (!panduanminer)
     // ============================================================
     if (command === 'panduanminer' || command === 'rulesminer' || command === 'guide') {
-        let txt = `📘 *BUKU PANDUAN PENAMBANG KRIPTO* 📘\n`;
-        txt += `_Pelajari aturan main sebelum bangkrut!_\n\n`;
-
-        txt += `⚡ *1. SISTEM LISTRIK (PLN)*\n`;
-        txt += `Setiap rig menyedot listrik *Rp 50 / MHs / Jam*.\n`;
-        txt += `• Listrik dibayar OTOMATIS saat kamu ketik \`!claimmining\`.\n`;
-        txt += `• ⚠️ *AWAS:* Jika saldo Rupiah kurang, kamu GAK BISA panen BTC (Rig disandera PLN).\n`;
-        txt += `• _Tips: Beli PSU Platinum untuk diskon listrik 30%._\n\n`;
-
-        txt += `🚔 *2. PASAR GELAP (BLACK MARKET)*\n`;
-        txt += `Item ilegal (USB Miner/Quantum) memang murah & kencang, TAPI:\n`;
-        txt += `• Setiap kali ketik \`!mining\`, ada risiko *POLISI DATANG*.\n`;
-        txt += `• Jika tertangkap, semua alat ilegal akan *DISITA/HILANG*.\n`;
-        txt += `• _Tips: High Risk, High Reward. Jangan nangis kalau dirazia._\n\n`;
-
-        txt += `📉 *3. MARKET DINAMIS (HARGA BERUBAH)*\n`;
-        txt += `Harga VGA di \`!shopminer\` berubah setiap *2 Jam*.\n`;
-        txt += `• Bisa naik mahal 📈 atau diskon besar 📉.\n`;
-        txt += `• _Tips: Cek harga dulu sebelum beli!_\n\n`;
-
-        txt += `⚔️ *4. PVP & PERETASAN (HACKER)*\n`;
-        txt += `Kamu bisa mencuri 5% BTC user lain dengan \`!hack @user\`.\n`;
-        txt += `• Peluang sukses: 40%.\n`;
-        txt += `• Jika GAGAL: Didenda Rp 500.000 oleh Polisi Siber.\n`;
-        txt += `• _Tips: Pasang Firewall di \`!upgrade\` agar kebal dari hacker._\n\n`;
-
-        txt += `🛠️ *5. UPGRADE RIG*\n`;
-        txt += `• ❄️ *Cooling:* Mencegah rig meledak saat *Random Event*.\n`;
-        txt += `• ⚡ *PSU:* Menghemat tagihan listrik 30%.\n`;
-        txt += `• 🛡️ *Firewall:* Anti-maling/Anti-hack.\n\n`;
-
-        txt += `🍀 *6. EVENT ACAK*\n`;
-        txt += `Hati-hati saat cek status! Bisa terjadi:\n`;
-        txt += `• 🔥 *Overheat:* Waktu mining reset (Rugi waktu).\n`;
-        txt += `• ⚡ *Konslet:* BTC berkurang 5%.\n`;
-        txt += `• 🍀 *Lucky Block:* Dapat bonus BTC gratis.`;
-
+        let txt = `📘 *PANDUAN MINING* 📘\n`;
+        txt += `_Baca biar gak rugi bandar!_\n\n`;
+        txt += `⚡ *LISTRIK:* Mining butuh biaya Rp 50/Hash/Jam. Bayar pas claim. Kalau saldo kurang, gak bisa panen.\n`;
+        txt += `🚔 *POLISI:* Alat Black Market (BM) bisa disita polisi sewaktu-waktu. Risiko ditanggung penumpang.\n`;
+        txt += `📉 *MARKET:* Harga VGA berubah tiap 2 jam. Beli pas murah!\n`;
+        txt += `⚔️ *PVP:* Bisa hack user lain (curi 5% BTC) kalau mereka gak punya Firewall.\n`;
+        txt += `🏆 *RANKING:* \`!topminer\` (Saldo BTC) & \`!tophash\` (Kekuatan Alat).`;
         return msg.reply(txt);
     }
 
-    // HITUNG HASHRATE & RISK
-    let totalHash = 0;
-    let illegalCount = 0;
-    user.mining.racks.forEach(id => {
-        if (HARDWARE[id]) {
-            totalHash += HARDWARE[id].hashrate;
-            if (HARDWARE[id].type === 'illegal') illegalCount++;
-        }
-    });
-    user.mining.totalHash = totalHash;
-
     // ============================================================
-    // 🖥️ STATUS & RANDOM EVENTS (!mining)
+    // 🖥️ DASHBOARD (!mining)
     // ============================================================
     if (command === 'mining' || command === 'miner') {
-        // 1. CEK RAZIA POLISI (Jika punya barang ilegal)
+        // 1. CEK RAZIA POLISI
         if (illegalCount > 0) {
             const chance = 0.05 * illegalCount; // 5% per alat ilegal
             if (Math.random() < chance) {
-                // RAZIA!
                 user.mining.racks = user.mining.racks.filter(id => HARDWARE[id].type !== 'illegal');
+                recalculateStats(user); // Update hash langsung
                 saveDB(db);
-                return msg.reply(`🚔 *POLISI MENGGEEREBEK RUMAHMU!* 🚔\n\nSemua mesin **Black Market** disita karena tidak berizin!\nHashrate kamu turun drastis. Jangan main ilegal kalau gak siap rugi!`);
+                return msg.reply(`🚔 *DORRR!! RAZIA POLISI!* 🚔\n\nSemua alat Black Market kamu disita karena ilegal!\nHashrate kamu anjlok. Sabar ya bos.`);
             }
         }
 
-        // 2. RANDOM EVENTS (Hanya trigger jika hash > 0)
+        // 2. RANDOM EVENT
         let eventMsg = "";
-        if (totalHash > 0 && Math.random() < 0.3) { // 30% Chance Event
-            const events = ['overheat', 'short_circuit', 'lucky'];
-            const ev = events[Math.floor(Math.random() * events.length)];
-
+        if (totalHash > 0 && Math.random() < 0.2) { 
+            const ev = Math.random() < 0.5 ? 'overheat' : 'lucky';
             if (ev === 'overheat' && !user.mining.upgrades.cooling) {
-                user.mining.lastClaim = now; // Reset timer (Rugi waktu)
-                eventMsg = `🔥 *SYSTEM OVERHEAT!*\nMesin kepanasan! Mining terhenti otomatis. Waktu mining di-reset.\n_Tips: Beli Liquid Cooling di !upgrade_`;
-            } else if (ev === 'short_circuit') {
-                const lostBTC = user.crypto.btc * 0.05;
-                user.crypto.btc -= lostBTC;
-                eventMsg = `⚡ *KONSLET LISTRIK!*\nAda arus pendek! Kamu kehilangan 5% BTC (${lostBTC.toFixed(8)}) untuk perbaikan.`;
+                user.mining.lastClaim = now; 
+                eventMsg = `🔥 *OVERHEAT!* Mesin kepanasan, waktu mining reset.`;
             } else if (ev === 'lucky') {
                 const bonus = 0.00005;
                 user.crypto.btc += bonus;
-                eventMsg = `🍀 *LUCKY BLOCK!*\nKamu menemukan blok langka! Bonus +${bonus} BTC.`;
+                eventMsg = `🍀 *LUCKY BLOCK!* Nemu bonus +${bonus} BTC.`;
             }
             if (eventMsg) saveDB(db);
         }
 
-        // Hitung Pendapatan
         const diffHours = (now - user.mining.lastClaim) / (1000 * 60 * 60);
         let pendingBTC = (totalHash * BTC_PER_HASH_HOUR * diffHours);
-        
-        // Biaya Listrik
         let elecCost = totalHash * ELECTRICITY_COST * diffHours;
-        if (user.mining.upgrades.psu) elecCost *= 0.7; // Diskon 30% kalau ada PSU
+        if (user.mining.upgrades.psu) elecCost *= 0.7;
 
         const btcPrice = db.market?.forex?.usd ? (db.market.forex.usd * 63000) : 1500000000;
         const estRupiah = Math.floor(pendingBTC * btcPrice);
 
-        let txt = `⛏️ *MINING DASHBOARD* ⛏️\n`;
+        let txt = `⛏️ *DASHBOARD MINING*\n`;
         txt += `👤 Miner: ${user.name}\n`;
         txt += `⚡ Hashrate: ${fmt(totalHash)} MH/s\n`;
-        txt += `🔌 Tagihan Listrik: -Rp ${fmt(elecCost)}\n`;
-        txt += `━━━━━━━━━━━━━━━━━━━\n`;
-        txt += `⏳ *PENDAPATAN SAAT INI*\n`;
-        txt += `⏱️ Jalan: ${diffHours.toFixed(2)} Jam\n`;
-        txt += `💎 Yield: ${pendingBTC.toFixed(8)} BTC\n`;
-        txt += `💰 Estimasi Bersih: Rp ${fmt(estRupiah - elecCost)}\n`;
-        txt += `━━━━━━━━━━━━━━━━━━━\n`;
+        txt += `🔌 Listrik: -Rp ${fmt(elecCost)}\n`;
+        txt += `━━━━━━━━━━━━━━━━\n`;
+        txt += `💎 Hasil: ${pendingBTC.toFixed(8)} BTC\n`;
+        txt += `💰 Estimasi: Rp ${fmt(estRupiah - elecCost)}\n`;
+        if (eventMsg) txt += `\n⚠️ ${eventMsg}`;
         
-        if (eventMsg) txt += `\n⚠️ *EVENT REPORT:*\n${eventMsg}\n`;
-
-        // Tampilkan Upgrades
-        let upgList = [];
-        if (user.mining.upgrades.cooling) upgList.push("❄️");
-        if (user.mining.upgrades.psu) upgList.push("⚡");
-        if (user.mining.upgrades.firewall) upgList.push("🛡️");
-        txt += `🔧 Upgrade: ${upgList.length > 0 ? upgList.join(" ") : "Standar"}\n`;
-
-        txt += `\n👇 *MENU:*\n`;
-        txt += `• \`!claimmining\` : Panen & Bayar Listrik\n`;
-        txt += `• \`!shopminer\` : Toko Resmi (Legal)\n`;
-        txt += `• \`!blackmarket\` : Pasar Gelap (Ilegal)\n`;
-        txt += `• \`!upgrade\` : Beli Komponen\n`;
-        txt += `• \`!hack @user\` : Curi BTC Orang`;
+        let upg = [];
+        if(user.mining.upgrades.cooling) upg.push("❄️");
+        if(user.mining.upgrades.psu) upg.push("⚡");
+        if(user.mining.upgrades.firewall) upg.push("🛡️");
+        txt += `\n🔧 Upgrade: ${upg.length>0 ? upg.join(" ") : "-"}`;
 
         return msg.reply(txt);
     }
 
     // ============================================================
-    // 💰 CLAIM HASIL (BAYAR LISTRIK)
+    // 💰 CLAIM (!claimmining)
     // ============================================================
     if (command === 'claimmining') {
-        if (user.mining.totalHash === 0) return msg.reply("❌ Belum punya mesin.");
-
+        if (totalHash === 0) return msg.reply("❌ Gak punya alat.");
         const diffHours = (now - user.mining.lastClaim) / (1000 * 60 * 60);
-        if (diffHours < 0.1) return msg.reply(`⏳ Mesin baru nyala, belum ada hasil.`);
+        if (diffHours < 0.01) return msg.reply(`⏳ Sabar, mesin baru jalan.`);
 
-        // Hitung BTC
-        const earnedBTC = (user.mining.totalHash * BTC_PER_HASH_HOUR * diffHours);
-        
-        // Hitung Listrik
-        let elecBill = user.mining.totalHash * ELECTRICITY_COST * diffHours;
-        if (user.mining.upgrades.psu) elecBill *= 0.7; // Diskon PSU
+        let earnedBTC = (totalHash * BTC_PER_HASH_HOUR * diffHours);
+        let elecBill = totalHash * ELECTRICITY_COST * diffHours;
+        if (user.mining.upgrades.psu) elecBill *= 0.7;
 
-        // Cek Saldo User untuk Bayar Listrik
         if (user.balance < elecBill) {
-            // Kalau saldo kurang, potong dari hasil BTC (Dikonversi paksa)
-            // Atau tolak klaim (Disini kita buat tolak biar user harus cari uang dulu)
-            return msg.reply(`⚠️ *GAGAL KLAIM!* ⚠️\n\nTagihan listrik kamu: *Rp ${fmt(elecBill)}*\nSaldo Dompet: *Rp ${fmt(user.balance)}*\n\nKamu tidak mampu bayar listrik! Cari uang dulu (Rob/Farming) untuk menebus hasil mining.`);
+            return msg.reply(`⚠️ *GAGAL KLAIM!*\nListrik: Rp ${fmt(elecBill)}\nSaldo: Rp ${fmt(user.balance)}\n\nBayar listrik dulu bos!`);
         }
 
-        // Eksekusi
         user.balance -= elecBill;
         user.crypto.btc = (user.crypto.btc || 0) + earnedBTC;
         user.mining.lastClaim = now;
         saveDB(db);
 
-        const btcPrice = db.market?.forex?.usd ? (db.market.forex.usd * 63000) : 1500000000;
-        const valueIdr = Math.floor(earnedBTC * btcPrice);
-
-        return msg.reply(`✅ *PANEN SUKSES*\n\n📥 Masuk: *${earnedBTC.toFixed(8)} BTC* (Rp ${fmt(valueIdr)})\n💸 Bayar Listrik: -Rp ${fmt(elecBill)}\n\n_BTC sudah masuk wallet!_`);
+        return msg.reply(`✅ *PANEN SUKSES*\n+ ${earnedBTC.toFixed(8)} BTC\n- Rp ${fmt(elecBill)} (Listrik)`);
     }
 
     // ============================================================
-    // 🛒 SHOP (MARKET DINAMIS)
+    // 🛒 BELI LEGAL (!belivga)
     // ============================================================
-    if (command === 'shopminer' || command === 'belivga') {
-        // Cek argumen beli
+    if (command === 'shopminer' || command === 'belivga' || command === 'buyvga') {
         if (args[0]) {
             const itemCode = args[0].toLowerCase();
-            if (!HARDWARE[itemCode] || HARDWARE[itemCode].type === 'illegal') return msg.reply("❌ Barang tidak ditemukan di toko resmi.");
+            if (!HARDWARE[itemCode] || HARDWARE[itemCode].type === 'illegal') return msg.reply("❌ Barang tidak ada.");
             
             const price = db.market.miningPrices[itemCode];
-            if (user.balance < price) return msg.reply(`❌ Uang kurang! Harga saat ini: Rp ${fmt(price)}`);
+            if (user.balance < price) return msg.reply(`❌ Uang kurang!`);
 
             user.balance -= price;
             user.mining.racks.push(itemCode);
+            recalculateStats(user); // UPDATE HASH
             saveDB(db);
-            return msg.reply(`✅ Berhasil membeli **${HARDWARE[itemCode].name}** seharga Rp ${fmt(price)}`);
+            return msg.reply(`✅ Beli **${HARDWARE[itemCode].name}** sukses!`);
         }
 
-        let txt = `🛒 *TOKO MINING RESMI* 🛒\n_Harga berubah setiap 2 jam!_\n\n`;
+        let txt = `🛒 *TOKO MINING RESMI*\n_Harga berubah tiap jam!_\n\n`;
         for (let [code, hw] of Object.entries(HARDWARE)) {
             if (hw.type === 'legal') {
                 const price = db.market.miningPrices[code];
-                // Indikator Harga (Murah/Mahal)
                 const diff = ((price - hw.basePrice) / hw.basePrice) * 100;
-                let indicator = diff > 0 ? "📈 Mahal" : "📉 Diskon";
-                if (Math.abs(diff) < 1) indicator = "⚖️ Normal";
-
-                txt += `🔹 *${hw.name}* [${code}]\n`;
-                txt += `   ⚡ ${hw.hashrate} MH/s\n`;
-                txt += `   💰 Rp ${fmt(price)} (${indicator} ${diff.toFixed(1)}%)\n\n`;
+                let ind = diff > 0 ? "📈" : "📉";
+                txt += `🔹 ${hw.name} [${code}]\n   ⚡ ${hw.hashrate} MH/s | 💰 Rp ${fmt(price)} (${ind} ${diff.toFixed(1)}%)\n\n`;
             }
         }
-        txt += `Cara beli: \`!belivga rtx4070\``;
+        txt += `Beli: \`!belivga rtx4070\``;
         return msg.reply(txt);
     }
 
     // ============================================================
-    // 🏴‍☠️ BLACK MARKET (RIG ILEGAL)
+    // 🏴‍☠️ BLACK MARKET (!bm)
     // ============================================================
     if (command === 'blackmarket' || command === 'bm') {
         if (args[0]) {
             const itemCode = args[0].toLowerCase();
-            if (!HARDWARE[itemCode] || HARDWARE[itemCode].type !== 'illegal') return msg.reply("❌ Barang ini tidak dijual disini.");
+            if (!HARDWARE[itemCode] || HARDWARE[itemCode].type !== 'illegal') return msg.reply("❌ Barang tidak ada.");
             
-            // Harga BM Tetap (Flat Price)
             const price = HARDWARE[itemCode].basePrice;
             if (user.balance < price) return msg.reply(`❌ Uang kurang!`);
 
             user.balance -= price;
             user.mining.racks.push(itemCode);
+            recalculateStats(user); // UPDATE HASH
             saveDB(db);
-            return msg.reply(`🤫 *TRANSAKSI BERHASIL*\nKamu membeli **${HARDWARE[itemCode].name}**.\n⚠️ *Hati-hati!* Barang ini berisiko disita polisi saat cek status mining.`);
+            return msg.reply(`🤫 Transaksi sukses: **${HARDWARE[itemCode].name}**.`);
         }
 
-        let txt = `🕵️ *BLACK MARKET* 🕵️\n_Barang kencang, murah, tapi RISIKO TINGGI._\n\n`;
+        let txt = `🕵️ *BLACK MARKET*\n`;
         for (let [code, hw] of Object.entries(HARDWARE)) {
             if (hw.type === 'illegal') {
-                txt += `🏴‍☠️ *${hw.name}* [${code}]\n`;
-                txt += `   ⚡ ${hw.hashrate} MH/s (Kencang!)\n`;
-                txt += `   💰 Rp ${fmt(hw.basePrice)}\n`;
-                txt += `   ⚠️ Risiko Sita: ${(hw.risk * 100)}%\n\n`;
+                txt += `🏴‍☠️ ${hw.name} [${code}]\n   ⚡ ${hw.hashrate} MH/s | 💰 Rp ${fmt(hw.basePrice)}\n   ⚠️ Risiko Sita: ${(hw.risk * 100)}%\n\n`;
             }
         }
-        txt += `Cara beli: \`!bm usb_miner\``;
+        txt += `Beli: \`!bm usb_miner\``;
         return msg.reply(txt);
     }
 
     // ============================================================
-    // 🛠️ UPGRADE RIG
+    // 🛠️ UPGRADE (!upgrade)
     // ============================================================
     if (command === 'upgrade') {
         if (args[0]) {
             const upg = args[0].toLowerCase();
-            if (!UPGRADES[upg]) return msg.reply("❌ Upgrade tidak ditemukan.");
-            if (user.mining.upgrades[upg]) return msg.reply("❌ Sudah punya upgrade ini.");
+            if (!UPGRADES[upg]) return msg.reply("❌ Salah kode.");
             if (user.balance < UPGRADES[upg].price) return msg.reply("❌ Uang kurang.");
 
             user.balance -= UPGRADES[upg].price;
             user.mining.upgrades[upg] = true;
             saveDB(db);
-            return msg.reply(`✅ Upgrade **${UPGRADES[upg].name}** terpasang!`);
+            return msg.reply(`✅ Terpasang: ${UPGRADES[upg].name}`);
         }
-
-        let txt = `🛠️ *BENGKEL UPGRADE*\n\n`;
+        
+        let txt = `🛠️ *UPGRADE*\n`;
         for (let [code, item] of Object.entries(UPGRADES)) {
-            const status = user.mining.upgrades[code] ? "✅ TERPASANG" : `💰 Rp ${fmt(item.price)}`;
-            txt += `🔹 *${item.name}* [${code}]\n`;
-            txt += `   ℹ️ ${item.effect}\n`;
-            txt += `   ${status}\n\n`;
+            const st = user.mining.upgrades[code] ? "✅" : `💰 Rp ${fmt(item.price)}`;
+            txt += `🔹 ${item.name} [${code}]\n   ℹ️ ${item.effect}\n   ${st}\n\n`;
         }
-        txt += `Cara: \`!upgrade cooling\``;
         return msg.reply(txt);
     }
 
     // ============================================================
-    // ⚔️ PVP HACKING
+    // ⚔️ HACK (!hack)
     // ============================================================
     if (command === 'hack') {
-        if (!args[0]) return msg.reply("❌ Tag target yg mau di-hack. Contoh: `!hack @user`");
-        
-        // Cari Target
+        if (!args[0]) return msg.reply("Tag user! `!hack @user`");
         const targetNumber = args[0].replace(/[^0-9]/g, '');
         const targetId = targetNumber + "@s.whatsapp.net";
         const targetUser = db.users[targetId];
 
-        if (!targetUser || !targetUser.mining || targetUser.mining.totalHash === 0) {
-            return msg.reply("❌ Target tidak menambang atau tidak ditemukan.");
-        }
+        if (!targetUser || !targetUser.mining || targetUser.mining.totalHash === 0) return msg.reply("❌ Target bukan miner.");
+        if (targetUser.mining.upgrades.firewall) return msg.reply("🛡️ Gagal! Target punya Firewall.");
 
-        // Cek Firewall Target
-        if (targetUser.mining.upgrades.firewall) {
-            return msg.reply(`🛡️ *GAGAL!* Target menggunakan Firewall canggih. Seranganmu mental!`);
-        }
-
-        // Cek Cooldown Penyerang (Misal 1 jam sekali)
-        if (user.lastHack && (now - user.lastHack < 60 * 60 * 1000)) {
-            return msg.reply("⏳ Tunggu 1 jam sebelum hacking lagi.");
-        }
-
-        // Mini Game Hacking (Chance 40%)
         if (Math.random() < 0.4) {
-            // Sukses
-            const stealAmount = (targetUser.crypto.btc || 0) * 0.05; // Curi 5%
-            if (stealAmount <= 0) return msg.reply("❌ Wallet target kosong.");
-
-            targetUser.crypto.btc -= stealAmount;
-            user.crypto.btc = (user.crypto.btc || 0) + stealAmount;
-            user.lastHack = now;
+            const steal = (targetUser.crypto.btc || 0) * 0.05;
+            if (steal <= 0) return msg.reply("❌ Wallet target kosong.");
+            targetUser.crypto.btc -= steal;
+            user.crypto.btc = (user.crypto.btc || 0) + steal;
             saveDB(db);
-
-            return msg.reply(`👨‍💻 *HACK SUKSES!* 👨‍💻\nKamu berhasil mencuri *${stealAmount.toFixed(8)} BTC* dari ${targetUser.name}!`);
+            return msg.reply(`✅ *BERHASIL!* Mencuri ${steal.toFixed(8)} BTC.`);
         } else {
-            // Gagal & Denda
             const fine = 500000;
             user.balance = Math.max(0, user.balance - fine);
-            user.lastHack = now;
             saveDB(db);
-            return msg.reply(`🚨 *HACK GAGAL!* 🚨\nIP kamu terlacak! Kamu didenda *Rp ${fmt(fine)}* oleh Cyber Police.`);
+            return msg.reply(`🚨 *GAGAL!* Denda Rp ${fmt(fine)}.`);
         }
     }
 
     // ============================================================
-    // 🏆 LEADERBOARD MINER
+    // 🏆 LEADERBOARD (!topminer & !tophash)
     // ============================================================
     if (command === 'topminer') {
         const top = Object.values(db.users)
             .filter(u => u.crypto && u.crypto.btc > 0)
             .sort((a, b) => b.crypto.btc - a.crypto.btc)
             .slice(0, 10);
+        let txt = `🏆 *TOP SALDO BITCOIN*\n`;
+        top.forEach((u, i) => txt += `${i+1}. ${u.name} — ₿ ${u.crypto.btc.toFixed(6)}\n`);
+        return msg.reply(txt);
+    }
 
-        let txt = `🏆 *TOP 10 BITCOIN HOLDER* 🏆\n\n`;
-        top.forEach((u, i) => {
-            txt += `${i+1}. ${u.name} — ₿ ${u.crypto.btc.toFixed(6)}\n`;
-        });
+    if (command === 'tophash') {
+        const top = Object.values(db.users)
+            .filter(u => u.mining && u.mining.totalHash > 0)
+            .sort((a, b) => b.mining.totalHash - a.mining.totalHash)
+            .slice(0, 10);
+        let txt = `⚡ *TOP KEKUATAN ALAT*\n`;
+        top.forEach((u, i) => txt += `${i+1}. ${u.name} — ${fmt(u.mining.totalHash)} MH/s\n`);
         return msg.reply(txt);
     }
 };
