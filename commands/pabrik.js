@@ -115,7 +115,7 @@ module.exports = async (command, args, msg, user, db, sock) => {
     // 📖 1. PANDUAN LENGKAP / HELP
     // ============================================================
     if (command === 'pabrikhelp' || command === 'panduanpabrik' || (command === 'pabrik' && args[0] === 'help')) {
-        // Helper kecil untuk format waktu di dalam pesan help
+        // Helper untuk format waktu biar rapi
         const formatTime = (ms) => {
             const min = ms / 60000;
             return min >= 60 ? `${min/60} Jam` : `${min} Mnt`;
@@ -124,63 +124,73 @@ module.exports = async (command, args, msg, user, db, sock) => {
         let txt = `🏭 *GRAND PANDUAN PABRIK & HILIRISASI* 🏭\n`;
         txt += `_Panduan lengkap penguasa industri tier 1-3._\n\n`;
 
-        txt += `🏗️ *DAFTAR HARGA & DURASI MESIN*\n`;
-        txt += `_Bos WAJIB punya mesin sesuai Tier untuk produksi._\n`;
+        txt += `🏗️ *INVESTASI MESIN (LINI PRODUKSI)*\n`;
+        txt += `_Tanpa mesin ini, hewan tidak bisa diolah._\n`;
         
-        const types = ['ayam', 'gurame', 'kambing', 'sapi', 'kuda', 'unta'];
-        types.forEach(t => {
-            const m1 = MACHINES[`${t}_1`];
-            const m2 = MACHINES[`${t}_2`];
-            const m3 = MACHINES[`${t}_3`];
-            txt += `\n*${t.toUpperCase()}* (Input: ${t})\n`;
-            txt += `├ T1: Rp ${fmt(m1.cost)} (⏳ ${formatTime(m1.cooldown)})\n`;
-            txt += `├ T2: Rp ${fmt(m2.cost)} (⏳ ${formatTime(m2.cooldown)})\n`;
-            txt += `└ T3: Rp ${fmt(m3.cost)} (⏳ ${formatTime(m3.cooldown)})\n`;
-        });
+        // Loop otomatis dari CONFIG biar kalau config diubah, help ikut berubah
+        for (let k in CONFIG.LINES) {
+            const line = CONFIG.LINES[k];
+            txt += `▪️ *${line.name.replace('🏭 ', '')}*: Rp ${fmt(line.cost)} (⏳ ${formatTime(line.cooldown)})\n`;
+        }
+        txt += `➤ Beli: \`!bangunpabrik <jenis>\` (Cth: !bangunpabrik sapi)\n\n`;
 
-        txt += `\n📜 *RESEP HILIRISASI (Tier 1 ➡️ Tier 3)*\n`;
-        txt += `_Gunakan nama bahan sebelah kiri untuk command !olah_\n\n`;
-        
-        txt += `🐔 *Lini Unggas*\n`;
-        txt += `1. \`ayam\` ➡️ Nugget (T1)\n`;
-        txt += `2. \`nugget\` ➡️ Burger (T2)\n`;
-        txt += `3. \`burger\` ➡️ Paket Franchise (T3)\n\n`;
+        txt += `📜 *POHON RESEP (HILIRISASI)*\n`;
+        txt += `_Tier 1 (Bahan) ➡️ Tier 2 (Masakan) ➡️ Tier 3 (Luxury)_\n`;
+        txt += `_Gunakan kode di sebelah kiri untuk command olah._\n\n`;
 
-        txt += `🐟 *Lini Ikan*\n`;
-        txt += `1. \`gurame\` ➡️ Fillet (T1)\n`;
-        txt += `2. \`fillet\` ➡️ Fish & Chips (T2)\n`;
-        txt += `3. \`fish_chips\` ➡️ Sushi Platter (T3)\n\n`;
+        txt += `🐔 *AYAM*\n`;
+        txt += `├ \`ayam\` ➡️ Nugget (T1)\n`;
+        txt += `├ \`nugget\` ➡️ Burger (T2)\n`;
+        txt += `└ \`burger\` ➡️ Paket Franchise (T3)\n\n`;
 
-        txt += `🐐 *Lini Kambing*\n`;
-        txt += `1. \`kambing\` ➡️ Daging Giling (T1)\n`;
-        txt += `2. \`giling_kambing\` ➡️ Kebab (T2)\n`;
-        txt += `3. \`kebab\` ➡️ Kambing Guling (T3)\n\n`;
+        txt += `🐟 *GURAME*\n`;
+        txt += `├ \`gurame\` ➡️ Fillet (T1)\n`;
+        txt += `├ \`fillet\` ➡️ Fish & Chips (T2)\n`;
+        txt += `└ \`fish_chips\` ➡️ Sushi Platter (T3)\n\n`;
 
-        txt += `🐄 *Lini Sapi*\n`;
-        txt += `1. \`sapi\` ➡️ Wagyu (T1)\n`;
-        txt += `2. \`wagyu\` ➡️ Steak (T2)\n`;
-        txt += `3. \`steak\` ➡️ Beef Wellington (T3)\n\n`;
+        txt += `🐐 *KAMBING*\n`;
+        txt += `├ \`kambing\` ➡️ Daging Giling (T1)\n`;
+        txt += `├ \`giling_kambing\` ➡️ Kebab (T2)\n`;
+        txt += `└ \`kebab\` ➡️ Kambing Guling (T3)\n\n`;
 
-        txt += `🐎 *Lini Kuda*\n`;
-        txt += `1. \`kuda\` ➡️ Sosis (T1)\n`;
-        txt += `2. \`sosis_kuda\` ➡️ Pizza (T2)\n`;
-        txt += `3. \`pizza_kuda\` ➡️ Lasagna (T3)\n\n`;
+        txt += `🐄 *SAPI*\n`;
+        txt += `├ \`sapi\` ➡️ Wagyu (T1)\n`;
+        txt += `├ \`wagyu\` ➡️ Steak (T2)\n`;
+        txt += `└ \`steak\` ➡️ Beef Wellington (T3)\n\n`;
 
-        txt += `🐫 *Lini Sultan*\n`;
-        txt += `1. \`unta\` ➡️ Susu Bubuk (T1)\n`;
-        txt += `2. \`susu_unta\` ➡️ Suplemen (T2)\n`;
-        txt += `3. \`suplemen\` ➡️ Elixir (T3)\n\n`;
+        txt += `🐎 *KUDA*\n`;
+        txt += `├ \`kuda\` ➡️ Sosis (T1)\n`;
+        txt += `├ \`sosis_kuda\` ➡️ Pizza (T2)\n`;
+        txt += `└ \`pizza_kuda\` ➡️ Lasagna (T3)\n\n`;
 
-        txt += `⚙️ *MEKANISME PABRIK*\n`;
-        txt += `➤ *Cara Beli:* \`!bangunpabrik <hewan> <tier>\`\n`;
-        txt += `➤ *Cara Olah:* \`!olah <nama_bahan> <jumlah>\`\n`;
-        txt += `➤ *Batching:* Max 3 item sekali proses.\n`;
-        txt += `➤ *Claim:* Hasil masuk gudang otomatis setelah durasi selesai (Cek \`!pabrik\` untuk update).\n`;
-        txt += `➤ *Risiko:* 2% kemungkinan mesin meledak.\n`;
+        txt += `🐫 *UNTA*\n`;
+        txt += `├ \`unta\` ➡️ Susu Bubuk (T1)\n`;
+        txt += `├ \`susu_unta\` ➡️ Suplemen (T2)\n`;
+        txt += `└ \`suplemen\` ➡️ Elixir (T3)\n\n`;
+
+        txt += `👮 *PEMBAGIAN TUGAS*\n`;
+        txt += `👑 *BOS (OWNER)*\n`;
+        txt += `├ \`!bangunpabrik <jenis>\` : Beli mesin.\n`;
+        txt += `├ \`!rekrut @tag\` : Cari karyawan.\n`;
+        txt += `├ \`!pecat @tag\` : Pecat karyawan.\n`;
+        txt += `├ \`!gudang\` : Cek stok barang jadi.\n`;
+        txt += `├ \`!jualproduk <kode>\` : Cairkan stok jadi uang.\n`;
+        txt += `└ \`!service\` : Perbaiki mesin meledak.\n\n`;
+
+        txt += `👷 *KARYAWAN (WORKER)*\n`;
+        txt += `├ \`!pabrik\` : Cek stamina & antrian mesin.\n`;
+        txt += `├ \`!olah <kode> <jumlah>\` : Kerja (Max 3).\n`;
+        txt += `├ \`!ngopi\` : Isi 50 stamina (Bayar 1Jt).\n`;
+        txt += `└ \`!resign\` : Keluar dari pabrik.\n\n`;
+
+        txt += `⚙️ *MEKANISME GAME*\n`;
+        txt += `1. *Waktu:* Produksi berjalan Real-Time (bisa ditinggal).\n`;
+        txt += `2. *Claim:* Barang otomatis masuk gudang bos saat selesai.\n`;
+        txt += `3. *Stamina:* Kerja butuh 10 Stamina. Regen otomatis atau \`!ngopi\`.\n`;
+        txt += `4. *Risiko:* Ada 2% kemungkinan mesin meledak saat produksi.\n`;
         
         return msg.reply(txt);
     }
-
     // ============================================================
     // 🏗️ 2. BANGUN MESIN (NEW: HEWAN + TIER)
     // ============================================================
@@ -428,8 +438,8 @@ module.exports = async (command, args, msg, user, db, sock) => {
         return msg.reply(txt);
     }
 
-    // --- COMMAND LAINNYA (SAMA SEPERTI SEBELUMNYA) ---
-    // (Rekrut, Gudang, Jual, Service, dll sama logic-nya)
+    // --- COMMAND ---
+   
     if (command === 'rekrut') {
         const factory = db.factories[senderId];
         if(!factory) return;
@@ -443,6 +453,29 @@ module.exports = async (command, args, msg, user, db, sock) => {
         db.workers[targetId] = { employer: senderId, stamina: 100, lastStaminaUpdate: now };
         saveDB(db);
         return msg.reply("✅ Direkrut.");
+    }
+    if (command === 'ngopi' || command === 'makan') {
+        const workerData = db.workers[senderId];
+        
+        // Cek apakah dia karyawan
+        if (!workerData || !workerData.employer) return msg.reply("❌ Kamu bukan karyawan pabrik.");
+
+        // Harga Kopi
+        const price = 1_000_000; // Rp 1Jt per cangkir (Mahal, inflasi pabrik 😂)
+        const restoreAmount = 50; // Nambah 50 Stamina
+
+        if (user.balance < price) return msg.reply(`❌ Uang kurang. Harga Kopi: Rp ${fmt(price)}.\nMinta bos transfer gaji/uang makan dulu!`);
+        
+        if (workerData.stamina >= GLOBAL_CONFIG.maxStamina) return msg.reply("⚡ Staminamu masih penuh woi.");
+
+        // Eksekusi
+        user.balance -= price;
+        workerData.stamina = Math.min(GLOBAL_CONFIG.maxStamina, (workerData.stamina || 0) + restoreAmount);
+        workerData.lastStaminaUpdate = now; // Reset waktu regen pasif
+        
+        saveDB(db);
+
+        return msg.reply(`☕ *Sruput... Segar!* (Rp -${fmt(price)})\n⚡ Stamina: +${restoreAmount} (${workerData.stamina}/${GLOBAL_CONFIG.maxStamina})\nAyo kerja lagi!`);
     }
     if (command === 'gudang') {
          const factory = db.factories[senderId];
