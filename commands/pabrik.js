@@ -1,61 +1,78 @@
 const { saveDB } = require('../helpers/database');
 
 // ==========================================
-// ⚙️ KONFIGURASI PABRIK & WAKTU
+// ⚙️ KONFIGURASI GLOBAL
 // ==========================================
-const CONFIG = {
-    // Definisi Mesin: Harga & Waktu (Real-Time)
-    LINES: {
-        'ayam':    { name: '🏭 Lini Unggas', cost: 15_000_000, cooldown: 15 * 60 * 1000 },   // 15 Menit
-        'gurame':  { name: '🏭 Lini Perikanan', cost: 25_000_000, cooldown: 30 * 60 * 1000 },   // 30 Menit
-        'kambing': { name: '🏭 Lini Kambing', cost: 50_000_000, cooldown: 60 * 60 * 1000 },   // 1 Jam
-        'sapi':    { name: '🏭 Lini Sapi', cost: 100_000_000, cooldown: 2 * 60 * 60 * 1000 }, // 2 Jam
-        'kuda':    { name: '🏭 Lini Kuda', cost: 250_000_000, cooldown: 4 * 60 * 60 * 1000 }, // 4 Jam
-        'unta':    { name: '🏭 Lini Sultan', cost: 500_000_000, cooldown: 6 * 60 * 60 * 1000 }  // 6 Jam
-    },
+const GLOBAL = {
     oprCost: 1_000_000,    // Biaya Listrik
     taxRate: 0.05,         // Pajak Jual
     breakdownChance: 0.02, // Risiko Meledak
     repairCost: 5_000_000, // Biaya Service
     staminaCost: 10,       // Stamina per aksi
     maxStamina: 100,       // Max Stamina
-    coffeePrice: 1_000_000,// Harga Kopi
-    coffeeRegen: 50,       // Regen Stamina Kopi
     weekendBonus: 1.10     // Bonus Yield Weekend
 };
 
 // ==========================================
-// 📚 DATA RESEP (TIER 1, 2, & 3)
+// 🏗️ DATA MESIN (TIER 1 - 3)
 // ==========================================
-const RECIPES = {
-    // --- TIER 1 (HEWAN -> BAHAN) ---
-    'ayam':    { tier: 1, line: 'ayam', outputCode: 'nugget', outputName: '🍗 Chicken Nugget', yield: 0.7, price: 100000 },
-    'gurame':  { tier: 1, line: 'gurame', outputCode: 'fillet', outputName: '🍣 Fillet Ikan', yield: 0.6, price: 300000 },
-    'kambing': { tier: 1, line: 'kambing', outputCode: 'giling_kambing', outputName: '🥩 Daging Giling', yield: 0.65, price: 200000 },
-    'sapi':    { tier: 1, line: 'sapi', outputCode: 'wagyu', outputName: '🥩 Wagyu A5 Cut', yield: 0.7, price: 90000 }, 
-    'kuda':    { tier: 1, line: 'kuda', outputCode: 'sosis_kuda', outputName: '🌭 Sosis Kuda', yield: 0.7, price: 350000 },
-    'unta':    { tier: 1, line: 'unta', outputCode: 'susu_unta', outputName: '🥛 Susu Unta Bubuk', yield: 0.5, price: 400000 },
-
-    // --- TIER 2 (BAHAN -> MASAKAN) ---
-    'nugget':         { tier: 2, line: 'ayam', outputCode: 'burger', outputName: '🍔 Burger Ayam', batchSize: 5, yield: 1.2, price: 180000 },
-    'fillet':         { tier: 2, line: 'gurame', outputCode: 'fish_chips', outputName: '🍱 Fish & Chips', batchSize: 5, yield: 1.1, price: 550000 },
-    'giling_kambing': { tier: 2, line: 'kambing', outputCode: 'kebab', outputName: '🌯 Kebab Turki', batchSize: 10, yield: 1.0, price: 350000 },
-    'wagyu':          { tier: 2, line: 'sapi', outputCode: 'steak', outputName: '🍲 Steak House', batchSize: 10, yield: 0.9, price: 180000 },
-    'sosis_kuda':     { tier: 2, line: 'kuda', outputCode: 'pizza_kuda', outputName: '🍕 Pizza Salami', batchSize: 5, yield: 1.5, price: 500000 },
-    'susu_unta':      { tier: 2, line: 'unta', outputCode: 'suplemen', outputName: '💊 Suplemen Vitalitas', batchSize: 2, yield: 0.8, price: 900000 },
-
-    // --- TIER 3 (LUXURY) ---
-    'burger':     { tier: 3, line: 'ayam', outputCode: 'happy_meal', outputName: '🍟 Paket Franchise', batchSize: 5, yield: 1.0, price: 350000 },
-    'fish_chips': { tier: 3, line: 'gurame', outputCode: 'sushi_platter', outputName: '🍱 Sushi Platter', batchSize: 5, yield: 1.0, price: 900000 },
-    'kebab':      { tier: 3, line: 'kambing', outputCode: 'kambing_guling', outputName: '🍖 Kambing Guling', batchSize: 5, yield: 1.0, price: 600000 },
-    'steak':      { tier: 3, line: 'sapi', outputCode: 'beef_wellington', outputName: '🥂 Beef Wellington', batchSize: 5, yield: 1.0, price: 250000 },
-    'pizza_kuda': { tier: 3, line: 'kuda', outputCode: 'lasagna', outputName: '🍝 Lasagna Premium', batchSize: 5, yield: 1.0, price: 800000 },
-    'suplemen':   { tier: 3, line: 'unta', outputCode: 'elixir', outputName: '🧪 Elixir Keabadian', batchSize: 2, yield: 1.0, price: 1800000 }
+const MACHINES = {
+    // AYAM
+    'ayam_1': { name: '🐔 Pemotong Unggas (T1)', cost: 15_000_000, cooldown: 15 * 60 * 1000 },
+    'ayam_2': { name: '🍗 Dapur Nugget (T2)', cost: 30_000_000, cooldown: 20 * 60 * 1000 },
+    'ayam_3': { name: '🍔 Franchise Packaging (T3)', cost: 60_000_000, cooldown: 30 * 60 * 1000 },
+    // GURAME
+    'gurame_1': { name: '🐟 Fillet Station (T1)', cost: 25_000_000, cooldown: 30 * 60 * 1000 },
+    'gurame_2': { name: '🍳 Penggorengan Ikan (T2)', cost: 50_000_000, cooldown: 40 * 60 * 1000 },
+    'gurame_3': { name: '🍱 Sushi Conveyor (T3)', cost: 100_000_000, cooldown: 60 * 60 * 1000 },
+    // KAMBING
+    'kambing_1': { name: '🐐 Penggiling Daging (T1)', cost: 50_000_000, cooldown: 60 * 60 * 1000 },
+    'kambing_2': { name: '🌯 Kebab Rotisserie (T2)', cost: 100_000_000, cooldown: 90 * 60 * 1000 },
+    'kambing_3': { name: '🔥 Grill Kambing Guling (T3)', cost: 200_000_000, cooldown: 120 * 60 * 1000 },
+    // SAPI
+    'sapi_1': { name: '🐄 RPH Modern (T1)', cost: 100_000_000, cooldown: 2 * 60 * 60 * 1000 },
+    'sapi_2': { name: '🥩 Steak House Kitchen (T2)', cost: 200_000_000, cooldown: 3 * 60 * 60 * 1000 },
+    'sapi_3': { name: '🥂 Fine Dining Unit (T3)', cost: 400_000_000, cooldown: 4 * 60 * 60 * 1000 },
+    // KUDA
+    'kuda_1': { name: '🐎 Pengolahan Kuda (T1)', cost: 250_000_000, cooldown: 4 * 60 * 60 * 1000 },
+    'kuda_2': { name: '🍕 Pizza Oven (T2)', cost: 500_000_000, cooldown: 5 * 60 * 60 * 1000 },
+    'kuda_3': { name: '🍝 Pasta Factory (T3)', cost: 1_000_000_000, cooldown: 6 * 60 * 60 * 1000 },
+    // UNTA
+    'unta_1': { name: '🐫 Ekstraktor Susu (T1)', cost: 500_000_000, cooldown: 6 * 60 * 60 * 1000 },
+    'unta_2': { name: '💊 Lab Farmasi (T2)', cost: 1_000_000_000, cooldown: 8 * 60 * 60 * 1000 },
+    'unta_3': { name: '🧪 Alchemy Lab (T3)', cost: 2_500_000_000, cooldown: 12 * 60 * 60 * 1000 },
 };
 
 // ==========================================
-// 🛠️ HELPER FUNCTIONS
+// 📚 DATA RESEP
 // ==========================================
+const RECIPES = {
+    // TIER 1
+    'ayam':    { tier: 1, machine: 'ayam_1', outputCode: 'nugget', outputName: '🍗 Chicken Nugget', yield: 0.7, price: 100000 },
+    'gurame':  { tier: 1, machine: 'gurame_1', outputCode: 'fillet', outputName: '🍣 Fillet Ikan', yield: 0.6, price: 300000 },
+    'kambing': { tier: 1, machine: 'kambing_1', outputCode: 'giling_kambing', outputName: '🥩 Daging Giling', yield: 0.65, price: 200000 },
+    'sapi':    { tier: 1, machine: 'sapi_1', outputCode: 'wagyu', outputName: '🥩 Wagyu A5 Cut', yield: 0.7, price: 90000 }, 
+    'kuda':    { tier: 1, machine: 'kuda_1', outputCode: 'sosis_kuda', outputName: '🌭 Sosis Kuda', yield: 0.7, price: 350000 },
+    'unta':    { tier: 1, machine: 'unta_1', outputCode: 'susu_unta', outputName: '🥛 Susu Unta Bubuk', yield: 0.5, price: 400000 },
+
+    // TIER 2
+    'nugget':         { tier: 2, machine: 'ayam_2', outputCode: 'burger', outputName: '🍔 Burger Ayam', batchSize: 5, yield: 1.2, price: 180000 },
+    'fillet':         { tier: 2, machine: 'gurame_2', outputCode: 'fish_chips', outputName: '🍱 Fish & Chips', batchSize: 5, yield: 1.1, price: 550000 },
+    'giling_kambing': { tier: 2, machine: 'kambing_2', outputCode: 'kebab', outputName: '🌯 Kebab Turki', batchSize: 10, yield: 1.0, price: 350000 },
+    'wagyu':          { tier: 2, machine: 'sapi_2', outputCode: 'steak', outputName: '🍲 Steak House', batchSize: 10, yield: 0.9, price: 180000 },
+    'sosis_kuda':     { tier: 2, machine: 'kuda_2', outputCode: 'pizza_kuda', outputName: '🍕 Pizza Salami', batchSize: 5, yield: 1.5, price: 500000 },
+    'susu_unta':      { tier: 2, machine: 'unta_2', outputCode: 'suplemen', outputName: '💊 Suplemen Vitalitas', batchSize: 2, yield: 0.8, price: 900000 },
+
+    // TIER 3
+    'burger':     { tier: 3, machine: 'ayam_3', outputCode: 'happy_meal', outputName: '🍟 Paket Franchise', batchSize: 5, yield: 1.0, price: 350000 },
+    'fish_chips': { tier: 3, machine: 'gurame_3', outputCode: 'sushi_platter', outputName: '🍱 Sushi Platter', batchSize: 5, yield: 1.0, price: 900000 },
+    'kebab':      { tier: 3, machine: 'kambing_3', outputCode: 'kambing_guling', outputName: '🍖 Kambing Guling', batchSize: 5, yield: 1.0, price: 600000 },
+    'steak':      { tier: 3, machine: 'sapi_3', outputCode: 'beef_wellington', outputName: '🥂 Beef Wellington', batchSize: 5, yield: 1.0, price: 250000 },
+    'pizza_kuda': { tier: 3, machine: 'kuda_3', outputCode: 'lasagna', outputName: '🍝 Lasagna Premium', batchSize: 5, yield: 1.0, price: 800000 },
+    'suplemen':   { tier: 3, machine: 'unta_3', outputCode: 'elixir', outputName: '🧪 Elixir Keabadian', batchSize: 2, yield: 1.0, price: 1800000 }
+};
+
+// HELPER
 const getDynamicPrice = (basePrice) => {
     const hour = new Date().getHours();
     const factor = Math.cos(hour * 1.5) * (basePrice * 0.15); 
@@ -71,23 +88,26 @@ const createProgressBar = (current, max) => {
 // 🚀 MAIN MODULE
 // ==========================================
 module.exports = async (command, args, msg, user, db, sock) => {
+    // DAFTAR COMMAND (COMMAND DIGANTI AGAR TIDAK BENTROK)
     const validCommands = [
-        'pabrik', 'bangunpabrik', 'rekrut', 'pecat', 'resign', 
-        'buat', // <--- SUDAH DIGANTI DARI OLAH
-        'gudang', 'jualproduk', 'service', 'ngopi', 'makan',
-        'leaderboard', 'topkorporat', 'cekpasar', 
-        'pabrikhelp', 'panduanpabrik'
+        'pabrik', 'bangunpabrik', 
+        'hire', 'fire', 'resign', // Ganti Rekrut -> Hire
+        'craft', // Ganti Olah/Buat -> Craft
+        'gudang', 'jualproduk', 'service', 'ngopi', 
+        'leaderboard', 'cekpasar', 'pabrikhelp'
     ];
     if (!validCommands.includes(command)) return;
 
+    // DATABASE INITIALIZATION
     if (!db.factories) db.factories = {};
     if (!db.workers) db.workers = {};
     if (!db.locks) db.locks = {}; 
 
-    const senderId = msg.sender;
+    // 🔥 FIX ID WHATSAPP
+    const senderId = msg.sender.split(':')[0] + '@s.whatsapp.net';
     const now = Date.now();
 
-    // ============================================================
+     // ============================================================
     // 📖 1. PANDUAN LENGKAP / HELP
     // ============================================================
     if (command === 'pabrikhelp' || command === 'panduanpabrik' || (command === 'pabrik' && args[0] === 'help')) {
@@ -118,6 +138,14 @@ module.exports = async (command, args, msg, user, db, sock) => {
         txt += `🐎 *KUDA*\n├ \`kuda\` ➡️ Sosis (T1)\n├ \`sosis_kuda\` ➡️ Pizza (T2)\n└ \`pizza_kuda\` ➡️ Lasagna (T3)\n\n`;
         txt += `🐫 *UNTA*\n├ \`unta\` ➡️ Susu Bubuk (T1)\n├ \`susu_unta\` ➡️ Suplemen (T2)\n└ \`suplemen\` ➡️ Elixir (T3)\n\n`;
 
+ txt += `🏗️ *HARGA MESIN*\n`;
+        const types = ['ayam', 'gurame', 'kambing', 'sapi', 'kuda', 'unta'];
+        types.forEach(t => {
+            txt += `*${t.toUpperCase()}*\n`;
+            txt += `├ T1: Rp ${fmt(MACHINES[`${t}_1`].cost)}\n`;
+            txt += `├ T2: Rp ${fmt(MACHINES[`${t}_2`].cost)}\n`;
+            txt += `└ T3: Rp ${fmt(MACHINES[`${t}_3`].cost)}\n`;
+
         txt += `👮 *PEMBAGIAN TUGAS*\n`;
         txt += `👑 *BOS (OWNER)*\n`;
         txt += `├ \`!bangunpabrik <jenis>\` : Beli mesin.\n`;
@@ -137,284 +165,50 @@ module.exports = async (command, args, msg, user, db, sock) => {
     }
 
     // ============================================================
-    // 🏗️ 2. BANGUN MESIN
+    // 🏗️ BANGUN PABRIK
     // ============================================================
     if (command === 'bangunpabrik') {
         const type = args[0]?.toLowerCase();
-        
-        if (!type || !CONFIG.LINES[type]) {
-            let txt = `❌ Tipe mesin salah. Pilih salah satu:\n`;
-            for (let k in CONFIG.LINES) txt += `➤ \`!bangunpabrik ${k}\` (Rp ${fmt(CONFIG.LINES[k].cost)})\n`;
-            return msg.reply(txt);
-        }
+        const tier = parseInt(args[1]);
 
-        const machineCost = CONFIG.LINES[type].cost;
+        if (!type || !tier || isNaN(tier)) return msg.reply("❌ Format: `!bangunpabrik <hewan> <tier>`\nContoh: `!bangunpabrik sapi 1`");
+
+        const machineCode = `${type}_${tier}`;
+        const machineData = MACHINES[machineCode];
+
+        if (!machineData) return msg.reply("❌ Mesin tidak ditemukan. Cek `!pabrikhelp`.");
 
         if (!db.factories[senderId]) {
-            db.factories[senderId] = { 
-                level: 1, exp: 0, employees: [], inventory: {}, 
-                activeLines: [], isBroken: false, createdAt: now 
-            };
+            db.factories[senderId] = { level: 1, exp: 0, employees: [], inventory: {}, activeLines: [], isBroken: false };
         }
         const factory = db.factories[senderId];
 
-        if (factory.activeLines.includes(type)) return msg.reply(`❌ Pabrikmu sudah punya **${CONFIG.LINES[type].name}**.`);
-        if (user.balance < machineCost) return msg.reply(`❌ Modal kurang Rp ${fmt(machineCost)}.`);
+        if (factory.activeLines.includes(machineCode)) return msg.reply("❌ Sudah punya mesin ini.");
+        if (user.balance < machineData.cost) return msg.reply(`❌ Uang kurang Rp ${fmt(machineData.cost)}.`);
 
-        user.balance -= machineCost;
-        factory.activeLines.push(type);
+        user.balance -= machineData.cost;
+        factory.activeLines.push(machineCode);
         saveDB(db);
-
-        return msg.reply(`🎉 *INVESTASI BERHASIL*\n${CONFIG.LINES[type].name} telah terpasang!\nDurasi Produksi: ${CONFIG.LINES[type].cooldown / 60000} Menit per item.`);
+        return msg.reply(`✅ Sukses bangun **${machineData.name}**!`);
     }
 
     // ============================================================
-    // ⚙️ 3. BUAT PRODUK (GANTI DARI OLAH)
+    // 🤝 HIRE (PENGGANTI REKRUT)
     // ============================================================
-    if (command === 'buat') { // <--- GANTI DISINI
-        if (db.locks[senderId]) return msg.reply("⏳ Sabar, mesin lagi proses!");
-        db.locks[senderId] = true;
-
-        try {
-            const workerData = db.workers[senderId];
-            if (!workerData || !workerData.employer) throw "Kamu pengangguran. Minta direkrut dulu.";
-
-            const ownerId = workerData.employer;
-            const ownerUser = db.users[ownerId];
-            const factory = db.factories[ownerId];
-
-            if (!factory) throw "Pabrik bosmu tutup.";
-            if (factory.isBroken) throw "⚙️ MESIN RUSAK! Lapor bosmu.";
-
-            const inputKey = args[0]?.toLowerCase();
-            const recipe = RECIPES[inputKey];
-            if (!recipe) throw `❌ Resep salah. Cek \`!pabrik help\`.`;
-
-            const requiredLine = recipe.line; 
-            if (!factory.activeLines.includes(requiredLine)) {
-                throw `❌ Bosmu belum membeli **${CONFIG.LINES[requiredLine].name}**.\nSuruh dia ketik \`!bangunpabrik ${requiredLine}\`.`;
-            }
-
-            let qty = parseInt(args[1]) || 1;
-            if (qty > 3) qty = 3;
-
-            // Stamina & Cost Check
-            const lastUpdate = workerData.lastStaminaUpdate || now;
-            const hoursPassed = (now - lastUpdate) / 3600000;
-            if (hoursPassed > 0.5) {
-                workerData.stamina = Math.min(CONFIG.maxStamina, (workerData.stamina || 100) + Math.floor(hoursPassed * 10));
-                workerData.lastStaminaUpdate = now;
-            }
-
-            const totalStaminaCost = CONFIG.staminaCost * qty;
-            const totalOprCost = CONFIG.oprCost * qty;
-
-            if ((workerData.stamina || 100) < totalStaminaCost) throw `😴 Stamina kurang. Ketik \`!ngopi\` dulu.`;
-            if (ownerUser.balance < totalOprCost) throw `❌ Saldo Bos kurang Rp ${fmt(totalOprCost)}.`;
-
-            // --- PROSES PRODUKSI ---
-            let totalOutputWeight = 0;
-            let efficiency = 1 + (factory.level * 0.05);
-            const day = new Date().getDay();
-            if (day === 0 || day === 6) efficiency *= CONFIG.weekendBonus;
-
-            // TIER 1 (DARI TERNAK)
-            if (recipe.tier === 1) {
-                const ternakArr = ownerUser.ternak || [];
-                let validIndexes = [];
-                ternakArr.forEach((a, i) => { if (a.type === inputKey && !a.isSick) validIndexes.push(i); });
-                
-                if (validIndexes.length < qty) throw `❌ Stok Hewan **${inputKey}** kurang.`;
-                
-                const targetIndexes = validIndexes.slice(0, qty).sort((a, b) => b - a);
-                targetIndexes.forEach(idx => {
-                    const animal = ternakArr[idx];
-                    totalOutputWeight += (animal.weight * recipe.yield * efficiency);
-                    ownerUser.ternak.splice(idx, 1);
-                });
-            } 
-            // TIER 2 & 3 (DARI GUDANG)
-            else {
-                const requiredStock = recipe.batchSize * qty;
-                const currentStock = factory.inventory?.[inputKey] || 0;
-                
-                if (currentStock < requiredStock) throw `❌ Stok bahan **${inputKey}** kurang.\nButuh: ${requiredStock.toFixed(2)} unit`;
-
-                factory.inventory[inputKey] -= requiredStock;
-                totalOutputWeight = (recipe.batchSize * qty) * recipe.yield * efficiency;
-            }
-
-            // QUEUE
-            const durationPerItem = CONFIG.LINES[requiredLine].cooldown;
-            const totalDuration = durationPerItem * qty;
-
-            ownerUser.balance -= totalOprCost;
-            workerData.stamina -= totalStaminaCost;
-            workerData.lastStaminaUpdate = now;
-            
-            if (!ownerUser.farm) ownerUser.farm = {};
-            if (!ownerUser.farm.processing) ownerUser.farm.processing = [];
-            
-            ownerUser.farm.processing.push({
-                machine: requiredLine,
-                product: recipe.outputCode,
-                qty: qty,
-                durationPerItem: durationPerItem,
-                startedAt: now,
-                finishAt: now + totalDuration
-            });
-
-            factory.exp += (20 * qty);
-            while (factory.exp >= factory.level * 100) { factory.exp -= factory.level * 100; factory.level++; }
-
-            const risk = 1 - Math.pow((1 - CONFIG.breakdownChance), qty);
-            let brokenMsg = "";
-            if (Math.random() < risk) {
-                factory.isBroken = true;
-                brokenMsg = "\n💥 *MESIN MELEDAK!* Lapor bos segera.";
-            }
-
-            saveDB(db);
-
-            let txt = `⚙️ *PRODUKSI BERJALAN (${qty}x)*\n`;
-            txt += `📦 Output Target: ${totalOutputWeight.toFixed(2)} kg ${recipe.outputName}\n`;
-            txt += `⏱️ Total Waktu: ${(totalDuration/60000).toFixed(0)} Menit\n`;
-            txt += `⚡ Stamina: -${totalStaminaCost}\n`;
-            txt += brokenMsg;
-
-            msg.reply(txt, { mentions: [senderId, ownerId] });
-
-        } catch (e) {
-            msg.reply(typeof e === 'string' ? e : "❌ Error sistem.");
-            console.error(e);
-        } finally {
-            delete db.locks[senderId];
-        }
-        return;
-    }
-
-    // ============================================================
-    // 🧱 4. DASHBOARD PABRIK
-    // ============================================================
-    if (command === 'pabrik') {
-        const workerData = db.workers[senderId];
-        if (workerData) {
-            const lastUpdate = workerData.lastStaminaUpdate || now;
-            const hoursPassed = (now - lastUpdate) / 3600000;
-            if (hoursPassed > 0.5) workerData.stamina = Math.min(CONFIG.maxStamina, (workerData.stamina || 100) + Math.floor(hoursPassed * 10));
-        }
-
-        if (workerData && workerData.employer) {
-            const bossName = db.users[workerData.employer]?.name || "Bos";
-            let txt = `👷 *KARTU KARYAWAN*\n👤 Nama: ${user.name}\n🏢 Majikan: ${bossName}\n⚡ Stamina: ${workerData.stamina}/${CONFIG.maxStamina}\n${createProgressBar(workerData.stamina, CONFIG.maxStamina)}\n\n🛠️ Tugas: \`!buat <item> [jumlah]\``;
-            return msg.reply(txt);
-        }
-
+    if (command === 'hire') {
         const factory = db.factories[senderId];
-        if (!factory) return msg.reply(`❌ Belum punya pabrik.\nKetik: \`!bangunpabrik\``);
-        
-        // --- LOGIKA KLAIM OTOMATIS ---
-        if (!user.farm) user.farm = {}; 
-        let processingQueue = user.farm.processing || [];
-        let newQueue = [];
-        let claimedItems = {};
+        if (!factory) return msg.reply("❌ Kamu belum punya pabrik.");
 
-        processingQueue.forEach(p => {
-            const elapsedTime = now - p.startedAt;
-            const finishedCount = Math.floor(elapsedTime / p.durationPerItem);
-            let take = Math.min(finishedCount, p.qty);
-
-            if (take > 0) {
-                if (!factory.inventory[p.product]) factory.inventory[p.product] = 0;
-                factory.inventory[p.product] += take;
-                
-                if (!claimedItems[p.product]) claimedItems[p.product] = 0;
-                claimedItems[p.product] += take;
-
-                p.qty -= take;
-                p.startedAt += (take * p.durationPerItem); 
-            }
-            if (p.qty > 0) newQueue.push(p);
-        });
-
-        user.farm.processing = newQueue;
-        saveDB(db);
-
-        const nextLvlXp = factory.level * 100;
-        let machines = factory.activeLines && factory.activeLines.length > 0 
-            ? factory.activeLines.map(l => CONFIG.LINES[l].name.replace('🏭 ', '')).join(', ')
-            : "⚠️ Belum ada mesin";
-
-        let txt = `🏭 *FACTORY DASHBOARD* (Lv. ${factory.level})\n`;
-        txt += `⚙️ Status: ${factory.isBroken ? '🔴 RUSAK' : '🟢 NORMAL'}\n`;
-        txt += `🏗️ Mesin: ${machines}\n`;
-        txt += `📘 XP: ${factory.exp}/${nextLvlXp}\n`;
-        txt += `${createProgressBar(factory.exp, nextLvlXp)}\n`;
-        
-        if (newQueue.length > 0) {
-            txt += `\n🔄 *SEDANG DIPROSES:*\n`;
-            newQueue.forEach(p => {
-                const timeLeft = Math.ceil((p.durationPerItem - (now - p.startedAt)) / 60000);
-                let pName = p.product;
-                for(let k in RECIPES) if(RECIPES[k].outputCode === p.product) pName = RECIPES[k].outputName;
-                txt += `⚙️ ${pName}: Sisa ${p.qty} (Next: ${timeLeft} mnt)\n`;
-            });
-        }
-
-        if (Object.keys(claimedItems).length > 0) {
-            txt += `\n✅ *BARANG JADI (MASUK GUDANG):*\n`;
-            for (let [code, count] of Object.entries(claimedItems)) {
-                let pName = code;
-                for(let k in RECIPES) if(RECIPES[k].outputCode === code) pName = RECIPES[k].outputName;
-                txt += `+ ${count} ${pName}\n`;
-            }
-        }
-
-        return msg.reply(txt);
-    }
-
-    // ============================================================
-    // ☕ NGOPI (ISI STAMINA)
-    // ============================================================
-    if (command === 'ngopi' || command === 'makan') {
-        const workerData = db.workers[senderId];
-        if (!workerData || !workerData.employer) return msg.reply("❌ Kamu bukan karyawan pabrik.");
-
-        const price = CONFIG.coffeePrice; 
-        const restoreAmount = CONFIG.coffeeRegen; 
-
-        if (user.balance < price) return msg.reply(`❌ Uang kurang. Harga Kopi: Rp ${fmt(price)}.`);
-        if (workerData.stamina >= CONFIG.maxStamina) return msg.reply("⚡ Staminamu masih penuh.");
-
-        user.balance -= price;
-        workerData.stamina = Math.min(CONFIG.maxStamina, (workerData.stamina || 0) + restoreAmount);
-        workerData.lastStaminaUpdate = now; 
-        
-        saveDB(db);
-        return msg.reply(`☕ *Sruput... Segar!* (Rp -${fmt(price)})\n⚡ Stamina: +${restoreAmount} (${workerData.stamina}/${CONFIG.maxStamina})`);
-    }
-
-    // --- COMMAND STANDAR ---
-    if (command === 'rekrut') {
-        const factory = db.factories[senderId];
-        if (!factory) return msg.reply("❌ Belum punya pabrik. Ketik !bangunpabrik dulu.");
-
-        // FIX: Ambil dari Mention/Tag (Bukan Text)
         let targetId = msg.message?.extendedTextMessage?.contextInfo?.mentionedJid?.[0];
-        
-        // Backup Logic (Teks)
-        if (!targetId) {
-            let rawNum = args[0]?.replace(/[^0-9]/g, '');
-            if (!rawNum) return msg.reply("❌ Format salah. Tag orangnya: `!rekrut @member`");
-            if (rawNum.startsWith('08')) rawNum = '62' + rawNum.slice(1);
-            targetId = rawNum + "@s.whatsapp.net";
+        if (!targetId && args[0]) {
+            let raw = args[0].replace(/[^0-9]/g, '');
+            if(raw.startsWith('08')) raw = '62' + raw.slice(1);
+            targetId = raw + '@s.whatsapp.net';
         }
 
-        if (db.workers[targetId]) {
-            const employerId = db.workers[targetId].employer;
-            if (employerId === senderId) return msg.reply("❌ Dia sudah jadi karyawanmu.");
-            return msg.reply(`❌ Dia sudah kerja di tempat lain.`);
-        }
+        if (!targetId) return msg.reply("❌ Tag orangnya: `!hire @member`");
+
+        if (db.workers[targetId]) return msg.reply(`❌ Dia sudah bekerja.`);
 
         factory.employees.push(targetId);
         db.workers[targetId] = { employer: senderId, stamina: 100, lastStaminaUpdate: now };
@@ -422,16 +216,167 @@ module.exports = async (command, args, msg, user, db, sock) => {
         return msg.reply(`✅ Berhasil merekrut karyawan!`, { mentions: [targetId] });
     }
 
-    if (command === 'gudang') {
-         const factory = db.factories[senderId];
-         if (!factory) return msg.reply("❌ Gak punya pabrik.");
-         let txt = `📦 *GUDANG PABRIK*\n`;
-         for (let k in RECIPES) {
-             const qty = factory.inventory?.[RECIPES[k].outputCode];
-             if(qty > 0) txt += `${RECIPES[k].tier===3?'🌟':RECIPES[k].tier===2?'🍔':'🍗'} ${RECIPES[k].outputName}: ${qty.toFixed(2)} kg\n`;
-         }
-         return msg.reply(txt || "Kosong");
+    // ============================================================
+    // ⚙️ CRAFT (PENGGANTI BUAT/OLAH)
+    // ============================================================
+    if (command === 'craft') {
+        if (db.locks[senderId]) return msg.reply("⏳ Tunggu...");
+        db.locks[senderId] = true;
+
+        try {
+            const workerData = db.workers[senderId];
+            if (!workerData || !workerData.employer) throw "Kamu belum direkrut. Minta bos `!hire @kamu`.";
+
+            const ownerId = workerData.employer;
+            const ownerUser = db.users[ownerId];
+            const factory = db.factories[ownerId];
+
+            if (!factory) throw "Pabrik bosmu tutup.";
+            if (factory.isBroken) throw "⚙️ MESIN RUSAK! Lapor bos.";
+
+            const inputKey = args[0]?.toLowerCase();
+            const qty = parseInt(args[1]) || 1;
+            const recipe = RECIPES[inputKey];
+
+            if (!recipe) throw "❌ Resep salah. Contoh: `!craft sapi 1`";
+            if (qty > 3) throw "❌ Max 3 item sekali kerja.";
+
+            if (!factory.activeLines.includes(recipe.machine)) {
+                const mName = MACHINES[recipe.machine]?.name || "Mesin";
+                throw `❌ Bosmu belum beli **${mName}**!`;
+            }
+
+            if (workerData.stamina < 10 * qty) throw "😴 Stamina habis. Ketik `!ngopi`.";
+            if (ownerUser.balance < GLOBAL.oprCost * qty) throw "❌ Uang bos habis.";
+
+            // --- PROSES ---
+            const machineData = MACHINES[recipe.machine];
+            const duration = machineData.cooldown * qty;
+
+            if (recipe.tier === 1) {
+                // Tier 1: Ambil dari Ternak Bos
+                const ternak = ownerUser.ternak || [];
+                const idx = ternak.findIndex(a => a.type === inputKey && !a.isSick);
+                if (idx === -1) throw `❌ Stok hewan **${inputKey}** habis di kandang bos.`;
+                ownerUser.ternak.splice(idx, 1);
+            } else {
+                // Tier 2/3: Ambil dari Gudang
+                if (!factory.inventory[inputKey] || factory.inventory[inputKey] < recipe.batchSize * qty) {
+                    throw `❌ Stok bahan **${inputKey}** di gudang kurang.`;
+                }
+                factory.inventory[inputKey] -= recipe.batchSize * qty;
+            }
+
+            ownerUser.balance -= GLOBAL.oprCost * qty;
+            workerData.stamina -= 10 * qty;
+            
+            // 🔥 ISOLATED QUEUE (Biar gak bentrok sama user.farm)
+            if (!user.pabrik) user.pabrik = {}; 
+            if (!user.pabrik.queue) user.pabrik.queue = [];
+            
+            user.pabrik.queue.push({
+                product: recipe.outputCode,
+                qty: qty,
+                durationPerItem: machineData.cooldown,
+                startedAt: now,
+                finishAt: now + duration
+            });
+
+            saveDB(db);
+            msg.reply(`⚙️ *PRODUKSI BERJALAN*\n⏳ Selesai dalam ${(duration/60000).toFixed(1)} menit.\n⚡ Stamina: -${10*qty}`);
+
+        } catch (e) {
+            msg.reply(e);
+        } finally {
+            delete db.locks[senderId];
+        }
+        return;
     }
+
+    // ============================================================
+    // 🧱 DASHBOARD & CLAIM
+    // ============================================================
+    if (command === 'pabrik') {
+        const workerData = db.workers[senderId];
+        
+        if (workerData) {
+            return msg.reply(`👷 *PROFIL KARYAWAN*\n⚡ Stamina: ${workerData.stamina}/100\n💼 Majikan: @${workerData.employer.split('@')[0]}`, {mentions: [workerData.employer]});
+        }
+
+        const factory = db.factories[senderId];
+        if (!factory) return msg.reply("❌ Belum punya pabrik.");
+
+        // CLAIM LOGIC (Dari user.pabrik.queue)
+        if (!user.pabrik) user.pabrik = {};
+        let queue = user.pabrik.queue || [];
+        let newQueue = [];
+        let claimed = [];
+
+        queue.forEach(p => {
+            const passed = now - p.startedAt;
+            const done = Math.floor(passed / p.durationPerItem);
+            const take = Math.min(done, p.qty);
+
+            if (take > 0) {
+                if (!factory.inventory[p.product]) factory.inventory[p.product] = 0;
+                factory.inventory[p.product] += take;
+                claimed.push(`${take}x ${p.product}`);
+                p.qty -= take;
+                p.startedAt += (take * p.durationPerItem);
+            }
+            if (p.qty > 0) newQueue.push(p);
+        });
+
+        user.pabrik.queue = newQueue;
+        saveDB(db);
+
+        let txt = `🏭 *PABRIK BOSS*\n`;
+        if (claimed.length > 0) txt += `✅ *SELESAI:* ${claimed.join(', ')}\n`;
+        if (newQueue.length > 0) txt += `🔄 *SEDANG JALAN:* ${newQueue.length} antrian.\n`;
+        else txt += `💤 Mesin sepi.\n`;
+        
+        return msg.reply(txt);
+    }
+
+    if (command === 'ngopi') {
+        const worker = db.workers[senderId];
+        if (!worker) return msg.reply("❌ Bukan karyawan.");
+        if (user.balance < 1000000) return msg.reply("❌ Uang kurang (1 Juta).");
+        user.balance -= 1000000;
+        worker.stamina = 100;
+        saveDB(db);
+        return msg.reply("☕ Stamina Full!");
+    }
+
+    if (command === 'gudang') {
+        const f = db.factories[senderId];
+        if (!f) return;
+        let txt = `📦 *GUDANG*\n`;
+        for (let k in f.inventory) {
+            if (f.inventory[k] > 0) txt += `- ${k}: ${f.inventory[k]}\n`;
+        }
+        msg.reply(txt);
+    }
+
+    if (command === 'fire') {
+        const f = db.factories[senderId];
+        if (!f) return;
+        let targetId = msg.message?.extendedTextMessage?.contextInfo?.mentionedJid?.[0];
+        if (!targetId) return msg.reply("❌ Tag karyawan.");
+        
+        f.employees = f.employees.filter(id => id !== targetId);
+        delete db.workers[targetId];
+        saveDB(db);
+        msg.reply("👢 Karyawan dipecat.");
+    }
+
+    if (command === 'resign') {
+        if (!db.workers[senderId]) return msg.reply("❌ Kamu pengangguran.");
+        delete db.workers[senderId];
+        saveDB(db);
+        msg.reply("👋 Berhasil resign.");
+    }
+    
     if (command === 'jualproduk') {
          const factory = db.factories[senderId];
          if (!factory) return;
@@ -442,65 +387,10 @@ module.exports = async (command, args, msg, user, db, sock) => {
          if(!itemKey) return;
          const item = RECIPES[itemKey];
          const price = getDynamicPrice(item.price);
-         const total = Math.floor(qty * price * (1 - CONFIG.taxRate));
+         const total = Math.floor(qty * price * (1 - GLOBAL.taxRate));
          user.balance += total;
          factory.inventory[code] = 0;
          saveDB(db);
          return msg.reply(`💰 Terjual semua! Net: Rp ${fmt(total)}`);
-    }
-    if (command === 'cekpasar') {
-         let txt = "💹 *HARGA SAAT INI*\n";
-         Object.keys(RECIPES).forEach(k => txt += `${RECIPES[k].outputName}: Rp ${fmt(getDynamicPrice(RECIPES[k].price))}\n`);
-         return msg.reply(txt);
-    }
-    if (command === 'service') {
-         const factory = db.factories[senderId];
-         if(!factory || !factory.isBroken) return msg.reply("Mesin aman.");
-         if(user.balance < CONFIG.repairCost) return msg.reply("Uang kurang.");
-         user.balance -= CONFIG.repairCost;
-         factory.isBroken = false;
-         saveDB(db);
-         return msg.reply("✅ Mesin beres.");
-    }
-    if (command === 'pecat') {
-        const factory = db.factories[senderId];
-        if(!factory) return;
-        const rawNum = args[0]?.replace(/[^0-9]/g, '');
-        const targetId = rawNum + "@s.whatsapp.net";
-        const idx = factory.employees.indexOf(targetId);
-        if(idx === -1) return msg.reply("Bukan karyawanmu.");
-        factory.employees.splice(idx, 1);
-        delete db.workers[targetId];
-        saveDB(db);
-        return msg.reply("👢 Dipecat.");
-    }
-    if (command === 'resign') {
-        const worker = db.workers[senderId];
-        if(!worker) return msg.reply("Kamu pengangguran.");
-        const bossFactory = db.factories[worker.employer];
-        if(bossFactory) {
-            const idx = bossFactory.employees.indexOf(senderId);
-            if(idx > -1) bossFactory.employees.splice(idx, 1);
-        }
-        delete db.workers[senderId];
-        saveDB(db);
-        return msg.reply("✅ Resign sukses.");
-    }
-    if (command === 'leaderboard' || command === 'topkorporat') {
-        const factoryOwners = Object.keys(db.factories);
-        if (factoryOwners.length === 0) return msg.reply("Belum ada korporat.");
-        const sorted = factoryOwners.sort((a, b) => {
-            const fa = db.factories[a];
-            const fb = db.factories[b];
-            return (fb.level - fa.level) || (fb.exp - fa.exp);
-        }).slice(0, 5);
-        let txt = `🏆 *TOP KORPORAT*\n`;
-        sorted.forEach((id, i) => {
-            const f = db.factories[id];
-            const name = db.users[id]?.name || "Unknown";
-            const machineCount = f.activeLines ? f.activeLines.length : 0;
-            txt += `${i+1}. *${name}* (Lv.${f.level} | ${machineCount} Mesin)\n`;
-        });
-        return msg.reply(txt);
     }
 };
