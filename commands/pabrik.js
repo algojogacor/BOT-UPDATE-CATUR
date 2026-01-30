@@ -107,7 +107,7 @@ module.exports = async (command, args, msg, user, db, sock) => {
     const senderId = msg.sender.split(':')[0] + '@s.whatsapp.net';
     const now = Date.now();
 
-     // ============================================================
+    // ============================================================
     // 📖 1. PANDUAN LENGKAP / HELP
     // ============================================================
     if (command === 'pabrikhelp' || command === 'panduanpabrik' || (command === 'pabrik' && args[0] === 'help')) {
@@ -116,20 +116,31 @@ module.exports = async (command, args, msg, user, db, sock) => {
             return min >= 60 ? `${min/60} Jam` : `${min} Mnt`;
         };
 
-        let txt = `🏭 *GRAND PANDUAN PABRIK & HILIRISASI* 🏭\n`;
-        txt += `_Panduan lengkap penguasa industri tier 1-3._\n\n`;
+        let txt = `🏭 *GRAND PANDUAN PABRIK V6* 🏭\n`;
+        txt += `_Sistem Hilirisasi Tier 1 - Tier 3_\n\n`;
 
-        txt += `🏗️ *INVESTASI MESIN (LINI PRODUKSI)*\n`;
-        // Loop otomatis dari CONFIG
-        for (let k in CONFIG.LINES) {
-            const line = CONFIG.LINES[k];
-            txt += `▪️ *${line.name.replace('🏭 ', '')}*: Rp ${fmt(line.cost)} (⏳ ${formatTime(line.cooldown)})\n`;
-        }
-        txt += `➤ Beli: \`!bangunpabrik <jenis>\` (Cth: !bangunpabrik sapi)\n\n`;
+        // --- BAGIAN 1: HARGA MESIN ---
+        txt += `🏗️ *DAFTAR HARGA MESIN*\n`;
+        txt += `_Format Beli: \`!bangunpabrik <hewan> <tier>\`_\n`;
+        txt += `_(Contoh: !bangunpabrik sapi 1)_\n\n`;
 
-        txt += `📜 *POHON RESEP (HILIRISASI)*\n`;
+        const types = ['ayam', 'gurame', 'kambing', 'sapi', 'kuda', 'unta'];
+        types.forEach(t => {
+            // Ambil data dari konstanta MACHINES
+            const m1 = MACHINES[`${t}_1`];
+            const m2 = MACHINES[`${t}_2`];
+            const m3 = MACHINES[`${t}_3`];
+            
+            txt += `*${t.toUpperCase()}*\n`;
+            txt += `├ T1: Rp ${fmt(m1.cost)} (⏳ ${formatTime(m1.cooldown)})\n`;
+            txt += `├ T2: Rp ${fmt(m2.cost)} (⏳ ${formatTime(m2.cooldown)})\n`;
+            txt += `└ T3: Rp ${fmt(m3.cost)} (⏳ ${formatTime(m3.cooldown)})\n`;
+        });
+
+        // --- BAGIAN 2: POHON RESEP ---
+        txt += `\n📜 *POHON RESEP (HILIRISASI)*\n`;
         txt += `_Tier 1 (Bahan) ➡️ Tier 2 (Masakan) ➡️ Tier 3 (Luxury)_\n`;
-        txt += `_Gunakan kode di sebelah kiri untuk command buat._\n\n`;
+        txt += `_Gunakan kode di sebelah kiri untuk command !craft_\n\n`;
 
         txt += `🐔 *AYAM*\n├ \`ayam\` ➡️ Nugget (T1)\n├ \`nugget\` ➡️ Burger (T2)\n└ \`burger\` ➡️ Paket Franchise (T3)\n\n`;
         txt += `🐟 *GURAME*\n├ \`gurame\` ➡️ Fillet (T1)\n├ \`fillet\` ➡️ Fish & Chips (T2)\n└ \`fish_chips\` ➡️ Sushi Platter (T3)\n\n`;
@@ -138,26 +149,19 @@ module.exports = async (command, args, msg, user, db, sock) => {
         txt += `🐎 *KUDA*\n├ \`kuda\` ➡️ Sosis (T1)\n├ \`sosis_kuda\` ➡️ Pizza (T2)\n└ \`pizza_kuda\` ➡️ Lasagna (T3)\n\n`;
         txt += `🐫 *UNTA*\n├ \`unta\` ➡️ Susu Bubuk (T1)\n├ \`susu_unta\` ➡️ Suplemen (T2)\n└ \`suplemen\` ➡️ Elixir (T3)\n\n`;
 
- txt += `🏗️ *HARGA MESIN*\n`;
-        const types = ['ayam', 'gurame', 'kambing', 'sapi', 'kuda', 'unta'];
-        types.forEach(t => {
-            txt += `*${t.toUpperCase()}*\n`;
-            txt += `├ T1: Rp ${fmt(MACHINES[`${t}_1`].cost)}\n`;
-            txt += `├ T2: Rp ${fmt(MACHINES[`${t}_2`].cost)}\n`;
-            txt += `└ T3: Rp ${fmt(MACHINES[`${t}_3`].cost)}\n`;
-
+        // --- BAGIAN 3: PEMBAGIAN TUGAS ---
         txt += `👮 *PEMBAGIAN TUGAS*\n`;
         txt += `👑 *BOS (OWNER)*\n`;
-        txt += `├ \`!bangunpabrik <jenis>\` : Beli mesin.\n`;
-        txt += `├ \`!rekrut @tag\` : Cari karyawan.\n`;
-        txt += `├ \`!pecat @tag\` : Pecat karyawan.\n`;
+        txt += `├ \`!bangunpabrik <jenis> <tier>\` : Beli mesin.\n`;
+        txt += `├ \`!hire @tag\` : Rekrut karyawan.\n`;
+        txt += `├ \`!fire @tag\` : Pecat karyawan.\n`;
         txt += `├ \`!gudang\` : Cek stok barang jadi.\n`;
         txt += `├ \`!jualproduk <kode>\` : Cairkan stok jadi uang.\n`;
         txt += `└ \`!service\` : Perbaiki mesin meledak.\n\n`;
 
         txt += `👷 *KARYAWAN (WORKER)*\n`;
         txt += `├ \`!pabrik\` : Cek stamina & antrian mesin.\n`;
-        txt += `├ \`!buat <kode> <jumlah>\` : Kerja (Max 3).\n`;
+        txt += `├ \`!craft <kode> <jumlah>\` : Kerja (Max 3).\n`;
         txt += `├ \`!ngopi\` : Isi 50 stamina (Bayar 1Jt).\n`;
         txt += `└ \`!resign\` : Keluar dari pabrik.\n\n`;
         
@@ -208,7 +212,10 @@ module.exports = async (command, args, msg, user, db, sock) => {
 
         if (!targetId) return msg.reply("❌ Tag orangnya: `!hire @member`");
 
-        if (db.workers[targetId]) return msg.reply(`❌ Dia sudah bekerja.`);
+        if (db.workers[targetId]) {
+            const majikan = db.workers[targetId].employer === senderId ? 'Kamu' : 'Orang Lain';
+            return msg.reply(`❌ Dia sudah bekerja (Majikan: ${majikan}).`);
+        }
 
         factory.employees.push(targetId);
         db.workers[targetId] = { employer: senderId, stamina: 100, lastStaminaUpdate: now };
@@ -231,7 +238,7 @@ module.exports = async (command, args, msg, user, db, sock) => {
             const ownerUser = db.users[ownerId];
             const factory = db.factories[ownerId];
 
-            if (!factory) throw "Pabrik bosmu tutup.";
+            if (!factory) throw "Pabrik bosmu sudah tutup.";
             if (factory.isBroken) throw "⚙️ MESIN RUSAK! Lapor bos.";
 
             const inputKey = args[0]?.toLowerCase();
