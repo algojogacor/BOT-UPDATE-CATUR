@@ -133,14 +133,20 @@ async function startBot() {
     
     // Inisialisasi Database
     try {
-        console.log("🔄 Menghubungkan ke Database...");
-        await connectToCloud(); 
-        global.db = loadDB(); 
-        console.log("✅ Database Terhubung!");
-    } catch (err) {
-        console.log("⚠️ GAGAL KONEK DB: Bot jalan dalam Mode Darurat.");
-        global.db = { users: {}, groups: {}, market: {}, settings: {} };
-    }
+    console.log("🔄 Menghubungkan ke MongoDB Atlas...");
+    await connectToCloud(); 
+    global.db = await loadDB(); 
+    
+    // Validasi
+    if (!global.db.users) global.db.users = {};
+    if (!global.db.groups) global.db.groups = {};
+    
+    console.log("✅ Database Terhubung & Data Berhasil Dimuat!");
+} catch (err) {
+    console.error("⚠️ GAGAL KONEK DB:", err.message);
+    console.log("⚠️ Bot jalan dalam Mode Darurat (RAM Only).");
+    global.db = { users: {}, groups: {}, market: {}, settings: {} };
+}
 
     // --- LOGIKA AUTH MONGODB ---
 const { MongoClient } = require('mongodb');
@@ -835,6 +841,7 @@ _Ubah hasil ternak jadi produk premium!_
 }
 
 startBot();
+
 
 
 
