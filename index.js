@@ -117,8 +117,8 @@ app.post('/api/catur-finish', (req, res) => {
     
     // Pastikan fungsi saveDB ada (jika pakai helper)
     if (typeof saveDB === 'function') {
-        saveDB(db); 
-    }
+    await saveDB(global.db); 
+}
 
     // 6. Kirim respon balik ke Web
     res.json({ status: 'ok', message: text, newBalance: userData.balance });
@@ -149,25 +149,31 @@ async function startBot() {
     global.db = { users: {}, groups: {}, market: {}, settings: {} };
 }
 
-   // --- LOGIKA AUTH MONGODB ---
-const { MongoClient } = require('mongodb');
+   // --- LOGIKA AUTH MONGODB (FIXED) ---
 const { useMongoDBAuthState } = require('baileys-mongodb-storage');
 
-// Gunakan mongoClient yang sudah dibuat
-const mongoClient = new MongoClient(process.env.MONGODB_URI);
-
+// Tidak perlu membuat MongoClient baru, gunakan 'client' yang di-import dari helper
+// Tapi jika variabel 'client' tidak terjangkau, kita pakai koneksi yang sudah stabil
 try {
-    await mongoClient.connect();
-    const db = mongoClient.db('whatsapp_bot');
-    const authCollection = db.collection('auth');
+    // Pastikan connectToCloud sudah dipanggil sebelumnya agar client sudah siap
+    // Sesuaikan nama DB ke 'bot_data' sesuai screenshot MongoDB Atlas kamu
+    const dbAuth = client.db('bot_data'); 
+    const authCollection = dbAuth.collection('auth_session');
     
-    // Menggunakan library untuk menyimpan session ke MongoDB
-    var { state, saveCreds } = await useMongoDBAuthState(authCollection);
-    console.log("✅ Session Auth terhubung ke MongoDB!");
+    // Inisialisasi Auth State dari MongoDB
+    const authData = await useMongoDBAuthState(authCollection);
+    var state = authData.state;
+    var saveCreds = authData.saveCreds;
+    
+    console.log("✅ Session Auth terhubung ke MongoDB Atlas (Collection: auth_session)");
 } catch (e) {
     console.error("❌ Gagal menghubungkan Auth ke MongoDB:", e.message);
-    // Fallback ke file lokal jika mongo gagal 
-    var { state, saveCreds } = await useMultiFileAuthState('auth_baileys');
+    console.log("⚠️ Menggunakan Fallback Auth Lokal (auth_baileys)");
+    
+    // Fallback ke penyimpanan file lokal jika MongoDB bermasalah
+    const localAuth = await useMultiFileAuthState('auth_baileys');
+    var state = localAuth.state;
+    var saveCreds = localAuth.saveCreds;
 }
 
 const sock = makeWASocket({
@@ -854,6 +860,7 @@ _Ubah hasil ternak jadi produk premium!_
 }
 
 startBot();
+
 
 
 
