@@ -14,7 +14,7 @@
     "yahoo-finance2": "2.8.1",
     "cheerio": "^1.1.2",
     "cors": "^2.8.6",
-    "mongodb": "^6.0.0",
+    "baileys-mongodb-storage": "^1.1.0"
     "dotenv": "^16.6.1",
     "express": "^4.22.1",
     "fluent-ffmpeg": "^2.1.3",
