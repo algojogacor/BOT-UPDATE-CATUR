@@ -1,69 +1,76 @@
 require('dotenv').config();
-const couchbase = require('couchbase');
+const { MongoClient } = require('mongodb');
 
-// Konfigurasi Cluster (Sesuaikan dengan kredensial kamu)
-const clusterConnStr = 'couchbases://cb.1t0wwbqqav1skwl3.cloud.couchbase.com'; 
-const username = 'adminbot'; 
-const password = '@Arya260408'; 
-const bucketName = 'algojogacor';   
+// Mengambil URL dari Environment Variable Koyeb
+const uri = process.env.MONGODB_URI; 
+const client = new MongoClient(uri);
 
-let cluster;
-let bucket;
-let collection;
-let localData = {}; // Penampung data di RAM
+let dbCollection;
+let localData = { users: {}, groups: {}, market: {}, settings: {} };
 
-// Fungsi Koneksi
+// Fungsi Koneksi ke MongoDB
 async function connectToCloud() {
     try {
-        console.log("☁️ Menghubungkan ke Couchbase...");
-        cluster = await couchbase.connect(clusterConnStr, {
-            username: username,
-            password: password,
-            configProfile: 'wanDevelopment',
-        });
-        bucket = cluster.bucket(bucketName);
-        collection = bucket.defaultCollection();
-        console.log("✅ Terhubung ke Couchbase Cloud!");
+        console.log("☁️ Menghubungkan ke MongoDB Atlas...");
+        await client.connect();
+        
+        // Pilih database 'whatsapp_bot' dan collection 'bot_data'
+        const db = client.db('whatsapp_bot');
+        dbCollection = db.collection('game_data');
+        
+        console.log("✅ Terhubung ke MongoDB Cloud!");
 
         // Langsung Load Data saat konek
         await loadFromCloud();
     } catch (err) {
-        console.error("❌ Gagal Konek Couchbase:", err);
+        console.error("❌ Gagal Konek MongoDB:", err.message);
     }
 }
 
-// Fungsi Load Data dari Cloud ke RAM
+// Fungsi Load Data dari MongoDB ke RAM
 async function loadFromCloud() {
     try {
-        const result = await collection.get('bot_data'); // 'bot_data' adalah ID dokumen kita
-        localData = result.content;
-        console.log("📥 Data berhasil ditarik dari Cloud.");
-    } catch (err) {
-        if (err.message.includes('document not found')) {
-            console.log("ℹ️ Data baru di Cloud. Menggunakan default.");
-            localData = { users: {}, groups: {}, market: {} };
+        // Kita simpan semua data bot dalam satu dokumen dengan ID 'main_data'
+        const result = await dbCollection.findOne({ _id: 'main_data' });
+        
+        if (result) {
+            localData = result.content;
+            console.log("📥 Data berhasil ditarik dari MongoDB.");
         } else {
-            console.error("⚠️ Gagal Load Data:", err.message);
+            console.log("ℹ️ Dokumen data belum ada. Menggunakan default.");
+            localData = { users: {}, groups: {}, market: {}, settings: {} };
         }
+    } catch (err) {
+        console.error("⚠️ Gagal Load Data:", err.message);
     }
     return localData;
 }
 
-// Fungsi Load (Dipanggil index.js)
-const loadDB = () => localData;
+// Fungsi Load (Dipanggil index.js) - Sekarang jadi Async
+const loadDB = async () => {
+    if (Object.keys(localData.users).length === 0) {
+        return await loadFromCloud();
+    }
+    return localData;
+};
 
-// Fungsi Save (Push RAM ke Cloud)
+// Fungsi Save (Push RAM ke MongoDB)
 const saveDB = async (data) => {
     if (data) localData = data;
     try {
-        await collection.upsert('bot_data', localData);
-        // console.log("☁️ Data tersimpan ke Cloud.");
+        // Upsert: Kalau belum ada dibuat, kalau sudah ada diupdate
+        await dbCollection.updateOne(
+            { _id: 'main_data' },
+            { $set: { content: localData } },
+            { upsert: true }
+        );
+        // console.log("☁️ Data tersimpan ke MongoDB.");
     } catch (err) {
-        console.error("⚠️ Gagal Save ke Cloud:", err.message);
+        console.error("⚠️ Gagal Save ke MongoDB:", err.message);
     }
 };
 
-// Helper Quest (Sama kayak kemarin)
+// Helper Quest
 const addQuestProgress = (user, questId) => {
     if (!user.quest || !user.quest.daily) return null;
     const quest = user.quest.daily.find(q => q.id === questId);
@@ -76,6 +83,4 @@ const addQuestProgress = (user, questId) => {
     return null;
 };
 
-
 module.exports = { connectToCloud, loadDB, saveDB, addQuestProgress };
-
