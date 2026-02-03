@@ -142,8 +142,14 @@ async function startBot() {
         global.db = { users: {}, groups: {}, market: {}, settings: {} };
     }
 
-    const { state, saveCreds } = await useMultiFileAuthState('auth_baileys');
+    // --- LOGIKA AUTH MONGODB ---
+const { MongoClient } = require('mongodb');
+const { useMongoDBAuthState } = require('baileys-mongodb-storage');
 
+const mongoClient = new MongoClient(process.env.MONGODB_URI);
+await mongoClient.connect();
+const authCollection = mongoClient.db('whatsapp_bot').collection('auth');
+const { state, saveCreds } = await useMongoDBAuthState(authCollection);
     const sock = makeWASocket({
         logger: pino({ level: 'silent' }),
         // ⚠️ WAJIB FALSE: Kita handle manual agar tidak error
@@ -829,6 +835,7 @@ _Ubah hasil ternak jadi produk premium!_
 }
 
 startBot();
+
 
 
 
