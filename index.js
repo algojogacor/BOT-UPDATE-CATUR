@@ -2,8 +2,9 @@
 const { default: makeWASocket, useMultiFileAuthState, DisconnectReason, downloadMediaMessage } = require('@whiskeysockets/baileys');
 const pino = require('pino');
 const fs = require('fs');
-const { useMongoDBAuthState } = require('baileys-mongodb-storage');
 const { exec } = require('child_process');
+const { connectToDB } = require('./helpers/mongodb');
+const { MongoClient } = require('mongodb');
 
 // Database Lokal
 const { connectToCloud, loadDB, saveDB, addQuestProgress } = require('./helpers/database');
@@ -135,8 +136,8 @@ async function startBot() {
     // Inisialisasi Database
     try {
     console.log("🔄 Menghubungkan ke MongoDB Atlas...");
-    await connectToCloud(); 
-    global.db = await loadDB(); 
+    const db = await connectToDB(); // Menggunakan helper mongodb.js
+global.db = await loadDB(db);  // Kirim koneksi db ke loadDB
     
     // Validasi
     if (!global.db.users) global.db.users = {};
@@ -149,31 +150,25 @@ async function startBot() {
     global.db = { users: {}, groups: {}, market: {}, settings: {} };
 }
 
-   // --- LOGIKA AUTH MONGODB (FIXED) ---
-const { useMongoDBAuthState } = require('baileys-mongodb-storage');
-
-// Tidak perlu membuat MongoClient baru, gunakan 'client' yang di-import dari helper
-// Tapi jika variabel 'client' tidak terjangkau, kita pakai koneksi yang sudah stabil
+  // LOGIKA AUTH MONGODB 
+let state, saveCreds;
 try {
-    // Pastikan connectToCloud sudah dipanggil sebelumnya agar client sudah siap
-    // Sesuaikan nama DB ke 'bot_data' sesuai screenshot MongoDB Atlas kamu
-    const dbAuth = client.db('bot_data'); 
-    const authCollection = dbAuth.collection('auth_session');
-    
-    // Inisialisasi Auth State dari MongoDB
-    const authData = await useMongoDBAuthState(authCollection);
-    var state = authData.state;
-    var saveCreds = authData.saveCreds;
-    
-    console.log("✅ Session Auth terhubung ke MongoDB Atlas (Collection: auth_session)");
-} catch (e) {
-    console.error("❌ Gagal menghubungkan Auth ke MongoDB:", e.message);
-    console.log("⚠️ Menggunakan Fallback Auth Lokal (auth_baileys)");
-    
-    // Fallback ke penyimpanan file lokal jika MongoDB bermasalah
+    // Kita gunakan helper yang sudah dibuat sebelumnya
+    const db = await connectToDB(); 
+    const authCollection = db.collection('auth_session');
+
+
     const localAuth = await useMultiFileAuthState('auth_baileys');
-    var state = localAuth.state;
-    var saveCreds = localAuth.saveCreds;
+    state = localAuth.state;
+    saveCreds = localAuth.saveCreds;
+    
+    console.log("✅ Menggunakan Auth Lokal (auth_baileys) - Lebih Stabil di Koyeb");
+} catch (e) {
+    console.error("❌ Error Initialization:", e.message);
+    // Fallback darurat
+    const fallback = await useMultiFileAuthState('auth_baileys');
+    state = fallback.state;
+    saveCreds = fallback.saveCreds;
 }
 
 const sock = makeWASocket({
@@ -860,6 +855,7 @@ _Ubah hasil ternak jadi produk premium!_
 }
 
 startBot();
+
 
 
 
