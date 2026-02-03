@@ -2,6 +2,7 @@
 const { default: makeWASocket, useMultiFileAuthState, DisconnectReason, downloadMediaMessage } = require('@whiskeysockets/baileys');
 const pino = require('pino');
 const fs = require('fs');
+const { useMongoDBAuthState } = require('baileys-mongodb-storage');
 const { exec } = require('child_process');
 
 // Database Lokal
@@ -148,23 +149,35 @@ async function startBot() {
     global.db = { users: {}, groups: {}, market: {}, settings: {} };
 }
 
-    // --- LOGIKA AUTH MONGODB ---
+   // --- LOGIKA AUTH MONGODB ---
 const { MongoClient } = require('mongodb');
 const { useMongoDBAuthState } = require('baileys-mongodb-storage');
 
+// Gunakan mongoClient yang sudah dibuat
 const mongoClient = new MongoClient(process.env.MONGODB_URI);
-await mongoClient.connect();
-const authCollection = mongoClient.db('whatsapp_bot').collection('auth');
-const { state, saveCreds } = await useMongoDBAuthState(authCollection);
-    const sock = makeWASocket({
-        logger: pino({ level: 'silent' }),
-        // ⚠️ WAJIB FALSE: Kita handle manual agar tidak error
-        printQRInTerminal: false, 
-        auth: state,
-        browser: ['Bot Arya', 'Chrome', '1.0.0'],
-        syncFullHistory: false,
-        generateHighQualityLinkPreview: true,
-    });
+
+try {
+    await mongoClient.connect();
+    const db = mongoClient.db('whatsapp_bot');
+    const authCollection = db.collection('auth');
+    
+    // Menggunakan library untuk menyimpan session ke MongoDB
+    var { state, saveCreds } = await useMongoDBAuthState(authCollection);
+    console.log("✅ Session Auth terhubung ke MongoDB!");
+} catch (e) {
+    console.error("❌ Gagal menghubungkan Auth ke MongoDB:", e.message);
+    // Fallback ke file lokal jika mongo gagal 
+    var { state, saveCreds } = await useMultiFileAuthState('auth_baileys');
+}
+
+const sock = makeWASocket({
+    logger: pino({ level: 'silent' }),
+    printQRInTerminal: false, 
+    auth: state,
+    browser: ['Bot Arya', 'Chrome', '1.0.0'],
+    syncFullHistory: false,
+    generateHighQualityLinkPreview: true,
+});
 
     // --- EVENT KONEKSI ---
     sock.ev.on('connection.update', (update) => {
@@ -841,6 +854,7 @@ _Ubah hasil ternak jadi produk premium!_
 }
 
 startBot();
+
 
 
 
