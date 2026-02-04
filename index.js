@@ -68,9 +68,8 @@ app.use(express.urlencoded({ extended: true }));
 app.use('/game', express.static(path.join(__dirname, 'public_catur')));
 
 // API: Web lapor hasil game ke sini
-app.post('/api/catur-finish', (req, res) => {
-    // 1. Ambil data 'level' juga dari body
-    const { user, result, bet, level } = req.body; 
+app.post('/api/catur-finish', async (req, res) => {  
+    const { user, result, bet, level } = req.body;
     
     // 2. Validasi Database
     const db = global.db;
@@ -855,6 +854,7 @@ _Ubah hasil ternak jadi produk premium!_
 }
 
 startBot();
+
 
 
 
