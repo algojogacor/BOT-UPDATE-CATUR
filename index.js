@@ -165,7 +165,7 @@ async function startBot() {
             creds: state.creds,
             keys: makeCacheableSignalKeyStore(state.keys, pino({ level: "fatal" }).child({ level: "fatal" })),
         },
-        browser: ['Bot Arya', 'Ubuntu', '3.0.0'],
+    
         connectTimeoutMs: 60000,
         keepAliveIntervalMs: 10000,
         syncFullHistory: false,
@@ -845,6 +845,7 @@ _Ubah hasil ternak jadi produk premium!_
 }
 
 startBot();
+
 
 
 
