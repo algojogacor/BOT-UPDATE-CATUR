@@ -1,5 +1,5 @@
 // --- 1. IMPORT MODUL UTAMA (BAILEYS) ---
-const { default: makeWASocket, useMultiFileAuthState, DisconnectReason, downloadMediaMessage } = require('@whiskeysockets/baileys');
+const { default: makeWASocket, useMultiFileAuthState, DisconnectReason, downloadMediaMessage, makeCacheableSignalKeyStore } = require('@whiskeysockets/baileys');
 const pino = require('pino');
 const fs = require('fs');
 const { exec } = require('child_process');
@@ -845,6 +845,7 @@ _Ubah hasil ternak jadi produk premium!_
 }
 
 startBot();
+
 
 
 
