@@ -172,7 +172,7 @@ try {
 
 const sock = makeWASocket({
     logger: pino({ level: 'silent' }),
-    printQRInTerminal: false, 
+    printQRInTerminal: true, 
     auth: state,
     browser: ['Bot Arya', 'Chrome', '1.0.0'],
     syncFullHistory: false,
@@ -181,9 +181,15 @@ const sock = makeWASocket({
 
     // --- EVENT KONEKSI ---
     sock.ev.on('connection.update', (update) => {
-        const { connection, lastDisconnect, qr } = update;
+    const { connection, lastDisconnect, qr } = update;
+    
+    if (qr) {
         
-        // 🔥 FIX QR CODE JADI TEXT PANJANG 🔥
+        console.log("👇 KODE QR STRING (Copy ke goqr.me):");
+        console.log(qr); 
+    }
+        
+        // QR CODE JADI TEXT PANJANG
         if (qr) {
             console.log('\n================================================');
             console.log('👇 COPY SEMUA KODE DI BAWAH KE: goqr.me 👇');
@@ -198,12 +204,23 @@ const sock = makeWASocket({
         }
 
         if (connection === 'close') {
-            const shouldReconnect = lastDisconnect.error?.output?.statusCode !== DisconnectReason.loggedOut;
-            console.log('❌ Koneksi terputus. Mencoba connect ulang...', shouldReconnect);
-            if (shouldReconnect) startBot();
+    const reason = lastDisconnect.error?.output?.statusCode;
+
+    if (reason === DisconnectReason.loggedOut) {
+        console.log("⚠️ Sesi Log Out. Menghapus folder auth...");
+        if (fs.existsSync('./auth_baileys')) {
+            fs.rmSync('./auth_baileys', { recursive: true, force: true });
+        }
+        startBot();
+    } else {
+        // Jeda
+        console.log("🔄 Reconnecting in 5s...");
+        setTimeout(() => startBot(), 5000);
+    }
+}
         } else if (connection === 'open') {
-            console.log('✅ BOT SIAP! 🚀 (Mode: Baileys)');
-            console.log('🔒 Mode: Hanya Grup Whitelist');
+            console.log('✅ BOT SIAP! 🚀');
+            console.log('🔒 Mode: Grup Whitelist');
         }
     });
 
@@ -854,6 +871,7 @@ _Ubah hasil ternak jadi produk premium!_
 }
 
 startBot();
+
 
 
 
