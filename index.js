@@ -132,82 +132,66 @@ app.listen(port, () => console.log(`Server jalan di port ${port}`));
 // --- 3. FUNGSI UTAMA KONEKSI BAILEYS ---
 async function startBot() {
     
-    // Inisialisasi Database
+    // 1. KONEKSI DATABASE (Tetap Konek DB supaya Saldo Aman)
     try {
-    console.log("🔄 Menghubungkan ke MongoDB Atlas...");
-    const db = await connectToDB(); // Menggunakan helper mongodb.js
-global.db = await loadDB(db);  // Kirim koneksi db ke loadDB
-    
-    // Validasi
-    if (!global.db.users) global.db.users = {};
-    if (!global.db.groups) global.db.groups = {};
-    
-    console.log("✅ Database Terhubung & Data Berhasil Dimuat!");
-} catch (err) {
-    console.error("⚠️ GAGAL KONEK DB:", err.message);
-    console.log("⚠️ Bot jalan dalam Mode Darurat (RAM Only).");
-    global.db = { users: {}, groups: {}, market: {}, settings: {} };
-}
+        console.log("🔄 Menghubungkan ke MongoDB Atlas...");
+        await connectToCloud(); 
+        global.db = await loadDB(); 
+        
+        // Validasi Struktur Data
+        if (!global.db.users) global.db.users = {};
+        if (!global.db.groups) global.db.groups = {};
+        
+        console.log("✅ Database Terhubung & Data Berhasil Dimuat!");
+    } catch (err) {
+        console.error("⚠️ GAGAL KONEK DB:", err.message);
+        global.db = { users: {}, groups: {}, market: {}, settings: {} };
+    }
 
-  // LOGIKA AUTH MONGODB 
-let state, saveCreds;
-try {
-    // Kita gunakan helper yang sudah dibuat sebelumnya
-    const db = await connectToDB(); 
-    const authCollection = db.collection('auth_session');
+    // 2. BERSIHKAN SESI LAMA 
+    console.log("🧹 Membersihkan sesi lama...");
+    if (fs.existsSync('./auth_baileys')) {
+        fs.rmSync('./auth_baileys', { recursive: true, force: true });
+        console.log("🗑️ Folder auth_baileys berhasil dihapus.");
+    }
 
+    // 3. START BAILEYS BARU
+    const { state, saveCreds } = await useMultiFileAuthState('auth_baileys');
 
-    const localAuth = await useMultiFileAuthState('auth_baileys');
-    state = localAuth.state;
-    saveCreds = localAuth.saveCreds;
-    
-    console.log("✅ Menggunakan Auth Lokal (auth_baileys) - Lebih Stabil di Koyeb");
-} catch (e) {
-    console.error("❌ Error Initialization:", e.message);
-    // Fallback darurat
-    const fallback = await useMultiFileAuthState('auth_baileys');
-    state = fallback.state;
-    saveCreds = fallback.saveCreds;
-}
-
-const sock = makeWASocket({
-    logger: pino({ level: 'silent' }),
-    printQRInTerminal: true, 
-    auth: state,
-    browser: ['Bot Arya', 'Chrome', '1.0.0'],
-    syncFullHistory: false,
-    generateHighQualityLinkPreview: true,
-});
+    const sock = makeWASocket({
+        logger: pino({ level: 'silent' }),
+        printQRInTerminal: false, 
+        auth: {
+            creds: state.creds,
+            keys: makeCacheableSignalKeyStore(state.keys, pino({ level: "fatal" }).child({ level: "fatal" })),
+        },
+        browser: ['Bot Arya', 'Ubuntu', '3.0.0'],
+        connectTimeoutMs: 60000,
+        keepAliveIntervalMs: 10000,
+        syncFullHistory: false,
+        generateHighQualityLinkPreview: true,
+    });
 
     // --- EVENT KONEKSI ---
     sock.ev.on('connection.update', (update) => {
         const { connection, lastDisconnect, qr } = update;
         
-        // 1. LOGIKA QR
+        // MUNCULKAN KODE QR DI LOG
         if (qr) {
             console.log('\n================================================');
             console.log('👇 KODE QR STRING (Copy ke goqr.me):');
-            console.log(qr);
+            console.log(qr); 
             console.log('================================================\n');
         }
 
-        // 2. LOGIKA KONEKSI PUTUS / NYAMBUNG
         if (connection === 'close') {
             const reason = lastDisconnect.error?.output?.statusCode;
             console.log('❌ Koneksi terputus. Reason:', reason);
 
-            // Anti-Bootloop: Hapus sesi jika Logged Out
-            if (reason === DisconnectReason.loggedOut) {
-                console.log("⚠️ Sesi Log Out. Menghapus folder auth...");
-                if (fs.existsSync('./auth_baileys')) {
-                    fs.rmSync('./auth_baileys', { recursive: true, force: true });
-                }
-                startBot();
-            } else {
-                // Reconnect biasa
-                console.log("🔄 Reconnecting in 5s...");
-                setTimeout(() => startBot(), 5000);
-            }
+
+            console.log("🔄 Restarting in 5s...");
+            setTimeout(() => startBot(), 5000);
+            
         } else if (connection === 'open') {
             console.log('✅ BOT SIAP! 🚀');
             console.log('🔒 Mode: Grup Whitelist');
@@ -215,7 +199,7 @@ const sock = makeWASocket({
     });
 
     sock.ev.on('creds.update', saveCreds);
-
+    
     // --- 4. EVENT MESSAGE ---
     sock.ev.on('messages.upsert', async ({ messages, type }) => {
         if (type !== 'notify') return;
@@ -861,6 +845,7 @@ _Ubah hasil ternak jadi produk premium!_
 }
 
 startBot();
+
 
 
 
