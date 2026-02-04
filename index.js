@@ -181,43 +181,33 @@ const sock = makeWASocket({
 
     // --- EVENT KONEKSI ---
     sock.ev.on('connection.update', (update) => {
-    const { connection, lastDisconnect, qr } = update;
-    
-    if (qr) {
+        const { connection, lastDisconnect, qr } = update;
         
-        console.log("👇 KODE QR STRING (Copy ke goqr.me):");
-        console.log(qr); 
-    }
-        
-        // QR CODE JADI TEXT PANJANG
+        // 1. LOGIKA QR
         if (qr) {
             console.log('\n================================================');
-            console.log('👇 COPY SEMUA KODE DI BAWAH KE: goqr.me 👇');
-            console.log('================================================\n');
-            
-            // INI AKAN MUNCULKAN TEKS PANJANG (RAW STRING)
-            console.log(qr); 
-            
-            console.log('\n================================================');
-            console.log('☝️ COPY KODE DI ATAS, LALU PASTE DI WEB QR GENERATOR ☝️');
+            console.log('👇 KODE QR STRING (Copy ke goqr.me):');
+            console.log(qr);
             console.log('================================================\n');
         }
 
+        // 2. LOGIKA KONEKSI PUTUS / NYAMBUNG
         if (connection === 'close') {
-    const reason = lastDisconnect.error?.output?.statusCode;
+            const reason = lastDisconnect.error?.output?.statusCode;
+            console.log('❌ Koneksi terputus. Reason:', reason);
 
-    if (reason === DisconnectReason.loggedOut) {
-        console.log("⚠️ Sesi Log Out. Menghapus folder auth...");
-        if (fs.existsSync('./auth_baileys')) {
-            fs.rmSync('./auth_baileys', { recursive: true, force: true });
-        }
-        startBot();
-    } else {
-        // Jeda
-        console.log("🔄 Reconnecting in 5s...");
-        setTimeout(() => startBot(), 5000);
-    }
-}
+            // Anti-Bootloop: Hapus sesi jika Logged Out
+            if (reason === DisconnectReason.loggedOut) {
+                console.log("⚠️ Sesi Log Out. Menghapus folder auth...");
+                if (fs.existsSync('./auth_baileys')) {
+                    fs.rmSync('./auth_baileys', { recursive: true, force: true });
+                }
+                startBot();
+            } else {
+                // Reconnect biasa
+                console.log("🔄 Reconnecting in 5s...");
+                setTimeout(() => startBot(), 5000);
+            }
         } else if (connection === 'open') {
             console.log('✅ BOT SIAP! 🚀');
             console.log('🔒 Mode: Grup Whitelist');
@@ -871,6 +861,7 @@ _Ubah hasil ternak jadi produk premium!_
 }
 
 startBot();
+
 
 
 
