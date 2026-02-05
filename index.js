@@ -155,14 +155,7 @@ async function startBot() {
         global.db = { users: {}, groups: {}, market: {}, settings: {} };
     }
 
-    // 2. BERSIHKAN SESI LAMA (AGAR SCAN ULANG & HINDARI ERROR 405)
-    console.log("🧹 Membersihkan sesi lama...");
-    if (fs.existsSync('./auth_baileys')) {
-        fs.rmSync('./auth_baileys', { recursive: true, force: true });
-        console.log("🗑️ Folder auth_baileys berhasil dihapus.");
-    }
-
-    // PERUBAHAN 2: Dapatkan Versi WA Terbaru
+    // 2. DAPATKAN VERSI WA TERBARU
     const { version, isLatest } = await fetchLatestBaileysVersion();
     console.log(`🤖 Menggunakan WA v${version.join('.')} (Latest: ${isLatest})`);
 
@@ -170,17 +163,17 @@ async function startBot() {
     const { state, saveCreds } = await useMultiFileAuthState('auth_baileys');
 
     const sock = makeWASocket({
-        version, // Gunakan versi terbaru
+        version,
         logger: pino({ level: 'silent' }),
         printQRInTerminal: false, 
         auth: {
             creds: state.creds,
             keys: makeCacheableSignalKeyStore(state.keys, pino({ level: "fatal" }).child({ level: "fatal" })),
         },
-        // PERUBAHAN 3: Browser String Standar (Mengatasi 405)
         browser: ['Ubuntu', 'Chrome', '20.0.04'], 
         connectTimeoutMs: 60000,
         keepAliveIntervalMs: 10000,
+        retryRequestDelayMs: 2000, 
         syncFullHistory: false,
         generateHighQualityLinkPreview: true,
     });
@@ -189,7 +182,6 @@ async function startBot() {
     sock.ev.on('connection.update', (update) => {
         const { connection, lastDisconnect, qr } = update;
         
-        // MUNCULKAN KODE QR DI LOG
         if (qr) {
             console.log('\n================================================');
             console.log('👇 KODE QR STRING (Copy ke goqr.me):');
@@ -199,11 +191,20 @@ async function startBot() {
 
         if (connection === 'close') {
             const reason = lastDisconnect.error?.output?.statusCode;
-            console.log('❌ Koneksi terputus. Reason:', reason);
+            console.log(`❌ Koneksi terputus. Reason: ${reason}`);
 
-            // Restart 5 detik
-            console.log("🔄 Restarting in 5s...");
-            setTimeout(() => startBot(), 5000);
+            // LOGIKA RECONNECT PINTAR
+            if (reason === DisconnectReason.loggedOut) {
+                console.log("⚠️ Sesi Log Out / Diblokir. Hapus folder auth...");
+                if (fs.existsSync('./auth_baileys')) fs.rmSync('./auth_baileys', { recursive: true, force: true });
+                startBot();
+            } else if (reason === 515) {
+                console.log("🔄 Restart Biasa (Stream Error). MENYAMBUNG KEMBALI TANPA HAPUS SESI...");
+                setTimeout(() => startBot(), 2000); 
+            } else {
+                console.log("🔄 Reconnecting in 5s...");
+                setTimeout(() => startBot(), 5000);
+            }
             
         } else if (connection === 'open') {
             console.log('✅ BOT SIAP! 🚀');
@@ -858,6 +859,7 @@ _Ubah hasil ternak jadi produk premium!_
 }
 
 startBot();
+
 
 
 
