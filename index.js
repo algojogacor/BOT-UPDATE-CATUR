@@ -1,5 +1,13 @@
 // --- 1. IMPORT MODUL UTAMA (BAILEYS) ---
-const { default: makeWASocket, useMultiFileAuthState, DisconnectReason, downloadMediaMessage, makeCacheableSignalKeyStore } = require('@whiskeysockets/baileys');
+const { 
+    default: makeWASocket, 
+    useMultiFileAuthState, 
+    DisconnectReason, 
+    downloadMediaMessage, 
+    makeCacheableSignalKeyStore,
+    fetchLatestBaileysVersion 
+} = require('@whiskeysockets/baileys');
+
 const pino = require('pino');
 const fs = require('fs');
 const { exec } = require('child_process');
@@ -129,16 +137,15 @@ app.post('/api/catur-finish', async (req, res) => {
 app.get('/', (req, res) => res.send('<h1>Bot Arya is Running! 🚀</h1>'));
 app.listen(port, () => console.log(`Server jalan di port ${port}`));
 
-// --- 3. FUNGSI UTAMA KONEKSI BAILEYS ---
+// ---KONEKSI BAILEYS ---
 async function startBot() {
     
-    // 1. KONEKSI DATABASE (Tetap Konek DB supaya Saldo Aman)
+    // 1. KONEKSI DATABASE
     try {
         console.log("🔄 Menghubungkan ke MongoDB Atlas...");
         await connectToCloud(); 
         global.db = await loadDB(); 
         
-        // Validasi Struktur Data
         if (!global.db.users) global.db.users = {};
         if (!global.db.groups) global.db.groups = {};
         
@@ -148,24 +155,30 @@ async function startBot() {
         global.db = { users: {}, groups: {}, market: {}, settings: {} };
     }
 
-    // 2. BERSIHKAN SESI LAMA 
+    // 2. BERSIHKAN SESI LAMA (AGAR SCAN ULANG & HINDARI ERROR 405)
     console.log("🧹 Membersihkan sesi lama...");
     if (fs.existsSync('./auth_baileys')) {
         fs.rmSync('./auth_baileys', { recursive: true, force: true });
         console.log("🗑️ Folder auth_baileys berhasil dihapus.");
     }
 
+    // PERUBAHAN 2: Dapatkan Versi WA Terbaru
+    const { version, isLatest } = await fetchLatestBaileysVersion();
+    console.log(`🤖 Menggunakan WA v${version.join('.')} (Latest: ${isLatest})`);
+
     // 3. START BAILEYS BARU
     const { state, saveCreds } = await useMultiFileAuthState('auth_baileys');
 
     const sock = makeWASocket({
+        version, // Gunakan versi terbaru
         logger: pino({ level: 'silent' }),
         printQRInTerminal: false, 
         auth: {
             creds: state.creds,
             keys: makeCacheableSignalKeyStore(state.keys, pino({ level: "fatal" }).child({ level: "fatal" })),
         },
-    
+        // PERUBAHAN 3: Browser String Standar (Mengatasi 405)
+        browser: ['Ubuntu', 'Chrome', '20.0.04'], 
         connectTimeoutMs: 60000,
         keepAliveIntervalMs: 10000,
         syncFullHistory: false,
@@ -188,7 +201,7 @@ async function startBot() {
             const reason = lastDisconnect.error?.output?.statusCode;
             console.log('❌ Koneksi terputus. Reason:', reason);
 
-
+            // Restart 5 detik
             console.log("🔄 Restarting in 5s...");
             setTimeout(() => startBot(), 5000);
             
@@ -845,6 +858,7 @@ _Ubah hasil ternak jadi produk premium!_
 }
 
 startBot();
+
 
 
 
