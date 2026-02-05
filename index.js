@@ -13,6 +13,8 @@ const fs = require('fs');
 const { exec } = require('child_process');
 const { connectToDB } = require('./helpers/mongodb');
 const { MongoClient } = require('mongodb');
+const ffmpeg = require('@ffmpeg-installer/ffmpeg');
+process.env.FFMPEG_PATH = ffmpeg.path;
 
 // Database Lokal
 const { connectToCloud, loadDB, saveDB, addQuestProgress } = require('./helpers/database');
@@ -859,6 +861,7 @@ _Ubah hasil ternak jadi produk premium!_
 }
 
 startBot();
+
 
 
 
